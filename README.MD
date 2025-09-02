@@ -1,4 +1,3 @@
-SISSUP Nefron - Sistema de Suporte ao Faturamento para Clínicas de Nefrologia
 📜 Sobre o Projeto
 
 O SISSUP Nefron é uma aplicação web projetada para modernizar e otimizar o processo de faturamento de sessões de diálise, com um foco inicial no fluxo de auditoria do SUS. O objetivo principal é eliminar o manuseio de papel, agilizar as aprovações, reduzir glosas e garantir a conformidade jurídica e contábil através de um fluxo de trabalho 100% digital.
