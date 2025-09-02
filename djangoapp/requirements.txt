@@ -1,0 +1,8 @@
+Django>=5.0
+psycopg[binary]
+django-environ
+environ
+boto3
+minio
+django-storages
+python-dateutil
