@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Busca de Pacientes - Recepção{% endblock %}
+
+{% block content %}
+    <h1>Busca de Pacientes - Recepção</h1>
+
+    <div class="input-group mb-3">
+        <input 
+            type="search" 
+            class="form-control" 
+            name="q" 
+            placeholder="Digite o nome ou CPF para buscar..."
+            
+            {# --- Atributos HTMX --- #}
+            hx-get="{% url 'dialysis:patient_search' %}" 
+            hx-trigger="keyup changed delay:500ms, search"
+            hx-target="#search-results"
+            hx-indicator=".htmx-indicator"
+        >
+        <span class="input-group-text htmx-indicator">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Buscando...</span>
+            </div>
+        </span>
+    </div>
+
+    <div id="search-results">
+        {% include 'dialysis/_patient_search_results.html' %}
+    </div>
+{% endblock %}

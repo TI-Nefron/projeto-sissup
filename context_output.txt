@@ -11,36 +11,24 @@ Docker version 27.5.1, build 27.5.1-0ubuntu3~22.04.2
 docker-compose version 1.29.2, build unknown
 
 ==================== 2. STATUS DOS CONTÊINERES ================
-CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS                     PORTS                                                                                      NAMES
-3630c6e10ed4   projeto-sissup_web   "bash -c 'python man…"   6 minutes ago   Exited (1) 6 minutes ago                                                                                              projeto-sissup_web_1
-48a5c93eb838   postgres:16-alpine   "docker-entrypoint.s…"   6 minutes ago   Up 6 minutes               0.0.0.0:5432->5432/tcp, :::5432->5432/tcp                                                  projeto-sissup_db_1
-b1900a929f43   minio/minio:latest   "/usr/bin/docker-ent…"   6 minutes ago   Up 6 minutes               0.0.0.0:9090->9000/tcp, [::]:9090->9000/tcp, 0.0.0.0:9091->9001/tcp, [::]:9091->9001/tcp   projeto-sissup_minio_1
+CONTAINER ID   IMAGE                COMMAND                  CREATED          STATUS                      PORTS                                                                                      NAMES
+8d3ad5a3977f   projeto-sissup_web   "bash -c 'python man…"   14 seconds ago   Exited (1) 12 seconds ago                                                                                              projeto-sissup_web_1
+95ad80edc588   postgres:16-alpine   "docker-entrypoint.s…"   19 seconds ago   Up 18 seconds (healthy)     0.0.0.0:5432->5432/tcp, :::5432->5432/tcp                                                  projeto-sissup_db_1
+a62801f1536e   minio/minio:latest   "/usr/bin/docker-ent…"   19 seconds ago   Up 18 seconds               0.0.0.0:9090->9000/tcp, [::]:9090->9000/tcp, 0.0.0.0:9091->9001/tcp, [::]:9091->9001/tcp   projeto-sissup_minio_1
 
 ==================== 3. LOGS DO SERVIÇO 'web' ================
 Attaching to projeto-sissup_web_1
-web_1    | System check identified some issues:
-web_1    | 
-web_1    | WARNINGS:
-web_1    | ?: (staticfiles.W004) The directory '/app/static' in the STATICFILES_DIRS setting does not exist.
+web_1    | Operations to perform:
+web_1    |   Apply all migrations: admin, auth, contenttypes, sessions
+web_1    | Running migrations:
+web_1    |   Applying contenttypes.0001_initial... OK
 web_1    | Traceback (most recent call last):
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
-web_1    |     self.connect()
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
-web_1    |     return func(*args, **kwargs)
-web_1    |            ^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/base.py", line 256, in connect
-web_1    |     self.connection = self.get_new_connection(conn_params)
-web_1    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
-web_1    |     return func(*args, **kwargs)
-web_1    |            ^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 332, in get_new_connection
-web_1    |     connection = self.Database.connect(**conn_params)
-web_1    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/psycopg/connection.py", line 118, in connect
-web_1    |     raise last_ex.with_traceback(None)
-web_1    | psycopg.OperationalError: connection failed: connection to server at "172.18.0.3", port 5432 failed: Connection refused
-web_1    | 	Is the server running on that host and accepting TCP/IP connections?
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 103, in _execute
+web_1    |     return self.cursor.execute(sql)
+web_1    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/psycopg/cursor.py", line 97, in execute
+web_1    |     raise ex.with_traceback(None)
+web_1    | psycopg.errors.UndefinedTable: relation "accounts_customuser" does not exist
 web_1    | 
 web_1    | The above exception was the direct cause of the following exception:
 web_1    | 
@@ -61,58 +49,46 @@ web_1    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 web_1    |   File "/usr/local/lib/python3.12/site-packages/django/core/management/base.py", line 107, in wrapper
 web_1    |     res = handle_func(*args, **kwargs)
 web_1    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/core/management/commands/migrate.py", line 114, in handle
-web_1    |     executor = MigrationExecutor(connection, self.migration_progress_callback)
-web_1    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/executor.py", line 18, in __init__
-web_1    |     self.loader = MigrationLoader(self.connection)
-web_1    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/loader.py", line 58, in __init__
-web_1    |     self.build_graph()
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/loader.py", line 235, in build_graph
-web_1    |     self.applied_migrations = recorder.applied_migrations()
-web_1    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/recorder.py", line 89, in applied_migrations
-web_1    |     if self.has_table():
-web_1    |        ^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/recorder.py", line 63, in has_table
-web_1    |     with self.connection.cursor() as cursor:
-web_1    |          ^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
-web_1    |     return func(*args, **kwargs)
-web_1    |            ^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/base.py", line 320, in cursor
-web_1    |     return self._cursor()
-web_1    |            ^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/base.py", line 296, in _cursor
-web_1    |     self.ensure_connection()
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
-web_1    |     return func(*args, **kwargs)
-web_1    |            ^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/base.py", line 278, in ensure_connection
-web_1    |     with self.wrap_database_errors:
-web_1    |          ^^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/core/management/commands/migrate.py", line 353, in handle
+web_1    |     post_migrate_state = executor.migrate(
+web_1    |                          ^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/executor.py", line 135, in migrate
+web_1    |     state = self._migrate_all_forwards(
+web_1    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/executor.py", line 167, in _migrate_all_forwards
+web_1    |     state = self.apply_migration(
+web_1    |             ^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/migrations/executor.py", line 252, in apply_migration
+web_1    |     with self.connection.schema_editor(
+web_1    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/schema.py", line 169, in __exit__
+web_1    |     self.execute(sql, None)
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/postgresql/schema.py", line 45, in execute
+web_1    |     return super().execute(sql, params)
+web_1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/schema.py", line 204, in execute
+web_1    |     cursor.execute(sql, params)
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+web_1    |     return super().execute(sql, params)
+web_1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+web_1    |     return self._execute_with_wrappers(
+web_1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+web_1    |     return executor(sql, params, many, context)
+web_1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+web_1    |     with self.db.wrap_database_errors:
+web_1    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
 web_1    |     raise dj_exc_value.with_traceback(traceback) from exc_value
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/base.py", line 279, in ensure_connection
-web_1    |     self.connect()
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
-web_1    |     return func(*args, **kwargs)
-web_1    |            ^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/base/base.py", line 256, in connect
-web_1    |     self.connection = self.get_new_connection(conn_params)
-web_1    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
-web_1    |     return func(*args, **kwargs)
-web_1    |            ^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 332, in get_new_connection
-web_1    |     connection = self.Database.connect(**conn_params)
-web_1    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-web_1    |   File "/usr/local/lib/python3.12/site-packages/psycopg/connection.py", line 118, in connect
-web_1    |     raise last_ex.with_traceback(None)
-web_1    | django.db.utils.OperationalError: connection failed: connection to server at "172.18.0.3", port 5432 failed: Connection refused
-web_1    | 	Is the server running on that host and accepting TCP/IP connections?
-
+web_1    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 103, in _execute
+web_1    |     return self.cursor.execute(sql)
+web_1    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+web_1    |   File "/usr/local/lib/python3.12/site-packages/psycopg/cursor.py", line 97, in execute
+web_1    |     raise ex.with_traceback(None)
+web_1    | django.db.utils.ProgrammingError: relation "accounts_customuser" does not exist
+web_1    |   Applying admin.0001_initial...
 ==================== 4. ESTRUTURA DE ARQUIVOS ================
 .
 ├── context_output.txt
@@ -122,8 +98,6 @@ web_1    | 	Is the server running on that host and accepting TCP/IP connections?
 │   │   ├── admin.py
 │   │   ├── apps.py
 │   │   ├── __init__.py
-│   │   ├── migrations
-│   │   │   └── __init__.py
 │   │   ├── models.py
 │   │   ├── tests.py
 │   │   └── views.py
@@ -131,8 +105,6 @@ web_1    | 	Is the server running on that host and accepting TCP/IP connections?
 │   │   ├── admin.py
 │   │   ├── apps.py
 │   │   ├── __init__.py
-│   │   ├── migrations
-│   │   │   └── __init__.py
 │   │   ├── models.py
 │   │   ├── tests.py
 │   │   └── views.py
@@ -140,8 +112,6 @@ web_1    | 	Is the server running on that host and accepting TCP/IP connections?
 │   │   ├── admin.py
 │   │   ├── apps.py
 │   │   ├── __init__.py
-│   │   ├── migrations
-│   │   │   └── __init__.py
 │   │   ├── models.py
 │   │   ├── tests.py
 │   │   └── views.py
@@ -149,8 +119,6 @@ web_1    | 	Is the server running on that host and accepting TCP/IP connections?
 │   │   ├── admin.py
 │   │   ├── apps.py
 │   │   ├── __init__.py
-│   │   ├── migrations
-│   │   │   └── __init__.py
 │   │   ├── models.py
 │   │   ├── tests.py
 │   │   └── views.py
@@ -158,24 +126,31 @@ web_1    | 	Is the server running on that host and accepting TCP/IP connections?
 │   ├── documents
 │   │   ├── admin.py
 │   │   ├── apps.py
+│   │   ├── constants.py
 │   │   ├── __init__.py
-│   │   ├── migrations
-│   │   │   └── __init__.py
 │   │   ├── models.py
 │   │   ├── tests.py
 │   │   └── views.py
 │   ├── manage.py
+│   ├── organization
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── __init__.py
+│   │   ├── models.py
+│   │   ├── tests.py
+│   │   └── views.py
 │   ├── project
 │   │   ├── asgi.py
 │   │   ├── __init__.py
 │   │   ├── settings.py
 │   │   ├── urls.py
 │   │   └── wsgi.py
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── static
 ├── docker-compose.yml
 └── README.MD
 
-12 directories, 47 files
+9 directories, 49 files
 
 ==================== 5. CONTEÚDO DOS ARQUIVOS DE CONFIGURAÇÃO ================
 -------------------- Conteúdo de: docker-compose.yml --------------------
@@ -192,7 +167,11 @@ services:
       - pg_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -219,8 +198,10 @@ services:
       - "8001:8000"
       
     depends_on:
-      - db
-      - minio
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
 
 volumes:
   pg_data:
@@ -301,6 +282,7 @@ INSTALLED_APPS = [
     'dialysis',
     'billing',
     'audit',
+    'organization',
 
     # Libs de terceiros
     'storages',
@@ -374,6 +356,7 @@ MINIO_USE_HTTPS = False # Em desenvolvimento, usamos HTTP
 
 # --- Tipo de Chave Primária Padrão ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'accounts.CustomUser'
 -------------------- Conteúdo de: djangoapp/project/urls.py --------------------
 """
 URL configuration for project project.

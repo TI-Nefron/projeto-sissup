@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'dialysis',
     'billing',
     'audit',
+    'organization',
 
     # Libs de terceiros
     'storages',
@@ -57,7 +58,7 @@ WSGI_APPLICATION = 'project.wsgi.application'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], # Pasta para templates globais
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -108,3 +109,4 @@ MINIO_USE_HTTPS = False # Em desenvolvimento, usamos HTTP
 
 # --- Tipo de Chave Primária Padrão ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'accounts.CustomUser'

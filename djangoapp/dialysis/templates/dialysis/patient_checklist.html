@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Checklist de Documentos{% endblock %}
+
+{% block content %}
+    <h2>Checklist para: {{ patient.full_name }}</h2>
+    <p><strong>Clínica:</strong> {{ patient.clinic.name }} | <strong>Pagador:</strong> {{ patient.payer.name|default:"Não especificado" }}</p>
+    
+    <hr>
+
+    <h4>Documentos Pessoais Anexados</h4>
+    
+    {# --- ALTERAÇÃO AQUI --- #}
+    {% if patient_documents %}
+        <ul class="list-group">
+            {% for doc in patient_documents %}
+                <li class="list-group-item">{{ doc.get_type_display }} (Enviado em: {{ doc.created_at|date:"d/m/Y" }})</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Nenhum documento pessoal encontrado para este paciente.</p>
+    {% endif %}
+
+    <hr>
+
+    <h4>Guias de Faturamento Associadas</h4>
+    {% if patient.guides.all %}
+         <ul class="list-group">
+            {% for guide in patient.guides.all %}
+                <li class="list-group-item">
+                    <strong>{{ guide.get_guide_type_display }} #{{ guide.authorization_number|default:"N/A" }}</strong> (Status: {{ guide.get_status_display }})
+                    {% if guide.documents.all %}
+                        <ul>
+                            {% for doc in guide.documents.all %}
+                                <li>{{ doc.get_type_display }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+         <p>Nenhuma guia de faturamento encontrada.</p>
+    {% endif %}
+
+
+    <a href="{% url 'dialysis:patient_search' %}" class="btn btn-secondary mt-3">Voltar para a busca</a>
+{% endblock %}
