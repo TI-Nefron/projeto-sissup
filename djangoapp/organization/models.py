@@ -1,18 +1,29 @@
+
 import uuid
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 class Clinic(models.Model):
-    """
-    Represents a clinic or business unit within the group.
-    This is the core of the multi-tenancy data separation.
-    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField("Nome da Clínica", max_length=100, unique=True)
-    is_active = models.BooleanField("Ativa", default=True)
+    name = models.CharField(
+        _("Nome da Clínica"),
+        max_length=100,
+        unique=True
+    )
+    cnpj = models.CharField(
+        _("CNPJ"),
+        max_length=18,
+        unique=True,
+        help_text=_("Formato: 00.000.000/0001-00")
+    )
+    is_active = models.BooleanField(
+        _("Ativa"),
+        default=True
+    )
 
     class Meta:
-        verbose_name = "Clínica"
-        verbose_name_plural = "Clínicas"
+        verbose_name = _("Clínica")
+        verbose_name_plural = _("Clínicas")
         ordering = ['name']
 
     def __str__(self):

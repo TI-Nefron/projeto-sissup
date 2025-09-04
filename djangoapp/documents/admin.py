@@ -1,10 +1,14 @@
-
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericTabularInline
-from .models import Document
-from .constants import PatientDocumentType, GuideDocumentType
+from .models import Document, DocumentType
 from billing.models import Guide
 from dialysis.models import Patient
+
+@admin.register(DocumentType)
+class DocumentTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'is_active')
+    list_filter = ('category', 'is_active')
+    search_fields = ('name',)
 
 class DocumentInline(GenericTabularInline):
     model = Document
@@ -15,15 +19,16 @@ class DocumentInline(GenericTabularInline):
 
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
+        field = formset.form.base_fields['type']
         
+        category = DocumentType.Category.PATIENT
         if isinstance(obj, Guide):
-            choices = GuideDocumentType.choices
-        elif isinstance(obj, Patient):
-            choices = PatientDocumentType.choices
-        else:
-            choices = []
+            category = DocumentType.Category.GUIDE
         
-        formset.form.base_fields['type'].choices = choices
+        field.queryset = DocumentType.objects.filter(
+            category=category, 
+            is_active=True
+        )
         return formset
 
 @admin.register(Document)

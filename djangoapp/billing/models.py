@@ -1,14 +1,31 @@
 import uuid
-from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.contenttypes.fields import GenericRelation
+from organization.models import Clinic
 
 class Payer(models.Model):
+    class PayerType(models.TextChoices):
+        SUS = 'SUS', _('SUS')
+        PRIVATE = 'PRIVATE', _('Convênio Privado')
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
-        verbose_name=_("Nome do Pagador"),
+        _("Nome do Convênio"),
         max_length=100,
         unique=True
+    )
+    payer_type = models.CharField(
+        _("Tipo"),
+        max_length=10,
+        choices=PayerType.choices,
+        default=PayerType.PRIVATE
+    )
+    clinics = models.ManyToManyField(
+        Clinic,
+        verbose_name=_("Clínicas Atendidas"),
+        related_name="payers",
+        blank=True
     )
     is_active = models.BooleanField(
         verbose_name=_("Ativo"),
@@ -16,8 +33,8 @@ class Payer(models.Model):
     )
 
     class Meta:
-        verbose_name = _("Pagador")
-        verbose_name_plural = _("Pagadores")
+        verbose_name = _("Convênio")
+        verbose_name_plural = _("Convênios")
         ordering = ['name']
 
     def __str__(self):
@@ -49,9 +66,15 @@ class Guide(models.Model):
         on_delete=models.PROTECT,
         related_name="guides"
     )
+    clinic = models.ForeignKey(
+        Clinic,
+        verbose_name=_("Clínica"),
+        on_delete=models.PROTECT,
+        related_name="guides"
+    )
     payer = models.ForeignKey(
         Payer,
-        verbose_name=_("Pagador (Convênio)"),
+        verbose_name=_("Convênio"),
         on_delete=models.PROTECT,
         related_name="guides",
         null=True,
@@ -95,3 +118,8 @@ class Guide(models.Model):
 
     def __str__(self):
         return f"{self.get_guide_type_display()} de {self.patient.full_name} ({self.created_at.strftime('%d/%m/%Y')})" # type: ignore
+
+    def save(self, *args, **kwargs):
+        if self.patient:
+            self.clinic = self.patient.clinic
+        super().save(*args, **kwargs)

@@ -1,23 +1,55 @@
+import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from documents.constants import DocumentType
+from documents.models import DocumentType
 from billing.models import Payer, Guide
 
 class ParameterRule(models.Model):
-    """
-    Define a regra de obrigatoriedade de um documento para uma combinação
-    de Pagador, Tipo de Guia e Natureza.
-    """
-    payer = models.ForeignKey(Payer, on_delete=models.CASCADE)
-    guide_type = models.CharField(_("Tipo de Guia"), max_length=16, choices=Guide.GuideType.choices)
-    nature = models.CharField(_("Natureza"), max_length=10, choices=Guide.Nature.choices)
-    document_type = models.CharField(_("Tipo de Documento"), max_length=16, choices=AllDocumentTypes)
-    is_mandatory = models.BooleanField(_("Obrigatório"), default=True)
+    class Context(models.TextChoices):
+        PATIENT_REGISTRATION = 'PATIENT', _('Cadastro de Paciente')
+        GUIDE = 'GUIDE', _('Guia de Faturamento')
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    payer = models.ForeignKey(
+        Payer,
+        verbose_name=_("Pagador"),
+        on_delete=models.CASCADE,
+        related_name="parameter_rules"
+    )
+    context = models.CharField(
+        verbose_name=_("Contexto"),
+        max_length=10,
+        choices=Context.choices,
+        default=Context.GUIDE
+    )
+    guide_type = models.CharField(
+        verbose_name=_("Tipo de Guia"),
+        max_length=16,
+        choices=Guide.GuideType.choices,
+        blank=True
+    )
+    nature = models.CharField(
+        verbose_name=_("Natureza"),
+        max_length=10,
+        choices=Guide.Nature.choices,
+        blank=True
+    )
+    required_documents = models.ManyToManyField(
+        DocumentType,
+        verbose_name=_("Tipos de Documentos Exigidos"),
+    )
+    is_active = models.BooleanField(
+        verbose_name=_("Regra Ativa"),
+        default=True
+    )
 
     class Meta:
         verbose_name = _("Regra de Parâmetro")
         verbose_name_plural = _("Regras de Parâmetros")
-        unique_together = ('payer', 'guide_type', 'nature', 'document_type')
-
+        ordering = ['payer', 'context', 'guide_type']
+        
     def __str__(self):
-        return f"{self.payer}: Exigir {self.get_document_type_display()} para {self.get_guide_type_display()} ({self.get_nature_display()})"
+        if self.context == self.Context.PATIENT_REGISTRATION:
+            return f"Regra de Paciente para {self.payer}"
+        return f"Regra de Guia para {self.payer} ({self.get_guide_type_display()} - {self.get_nature_display()})" # type: ignore

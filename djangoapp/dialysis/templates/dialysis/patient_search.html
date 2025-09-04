@@ -1,31 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Busca de Pacientes - Recepção{% endblock %}
+{% block title %}
+    Dashboard - Busca de Pacientes
+{% endblock title %}
 
 {% block content %}
-    <h1>Busca de Pacientes - Recepção</h1>
-
-    <div class="input-group mb-3">
-        <input 
-            type="search" 
-            class="form-control" 
-            name="q" 
-            placeholder="Digite o nome ou CPF para buscar..."
-            
-            {# --- Atributos HTMX --- #}
-            hx-get="{% url 'dialysis:patient_search' %}" 
-            hx-trigger="keyup changed delay:500ms, search"
-            hx-target="#search-results"
-            hx-indicator=".htmx-indicator"
-        >
-        <span class="input-group-text htmx-indicator">
-            <div class="spinner-border spinner-border-sm" role="status">
-                <span class="visually-hidden">Buscando...</span>
+    <h1 class="mb-4">Dashboard de Recepção</h1>
+    
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Buscar Paciente</h5>
+        </div>
+        <div class="card-body">
+            <div class="input-group">
+                <input 
+                    type="search" 
+                    class="form-control form-control-lg" 
+                    name="q" 
+                    placeholder="Digite o nome ou CPF do paciente para buscar..."
+                    value="{{ query|default:'' }}"
+                    hx-get="{% url 'dialysis:busca_paciente' %}" 
+                    hx-trigger="keyup changed delay:300ms, search"
+                    hx-target="#search-results"
+                    hx-indicator=".htmx-indicator"
+                >
+                <span class="input-group-text htmx-indicator">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Buscando...</span>
+                    </div>
+                </span>
             </div>
-        </span>
+    
+            <div id="search-results" class="mt-3">
+                {% include 'dialysis/_patient_search_results.html' %}
+            </div>
+        </div>
     </div>
-
-    <div id="search-results">
-        {% include 'dialysis/_patient_search_results.html' %}
-    </div>
-{% endblock %}
+{% endblock content %}

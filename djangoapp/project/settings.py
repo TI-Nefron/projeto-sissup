@@ -30,12 +30,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Nossos apps (essencial adicioná-los aqui)
+    'rest_framework',
     'accounts',
-    'documents',
+    'documents.apps.DocumentsConfig',
     'dialysis',
     'billing',
     'audit',
     'organization',
+    'parameters',
 
     # Libs de terceiros
     'storages',
@@ -95,18 +97,16 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
-# --- Configuração do Armazenamento com MinIO ---
-# Define o MinIO como o local padrão para salvar TODOS os arquivos
-DEFAULT_FILE_STORAGE = 'documents.storage.MinioMediaStorage'
-
 # Variáveis lidas do .env para configurar a conexão com o MinIO
 MINIO_ENDPOINT = env('MINIO_ENDPOINT')
 MINIO_ACCESS_KEY = env('MINIO_ROOT_USER') # Usando as credenciais root
 MINIO_SECRET_KEY = env('MINIO_ROOT_PASSWORD')
-MINIO_BUCKET_DOCS = env('MINIO_BUCKET_DOCS')
-MINIO_BUCKET_APAC = env('MINIO_BUCKET_APAC')
+MINIO_BUCKET_PATIENT_DOCS = env('MINIO_BUCKET_PATIENT_DOCS')
+MINIO_BUCKET_GUIDE_DOCS = env('MINIO_BUCKET_GUIDE_DOCS')
 MINIO_USE_HTTPS = False # Em desenvolvimento, usamos HTTP
 
 # --- Tipo de Chave Primária Padrão ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.CustomUser'
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'

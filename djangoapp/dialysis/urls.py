@@ -1,9 +1,12 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
 app_name = 'dialysis'
 
+router = DefaultRouter()
+router.register(r'pacientes', views.PatientViewSet, basename='paciente')
+
 urlpatterns = [
-    path('reception/search/', views.patient_search_view, name='patient_search'),
-    path('patient/<uuid:patient_id>/checklist/', views.patient_checklist_view, name='patient_checklist'),
+    path('', include(router.urls)),
 ]

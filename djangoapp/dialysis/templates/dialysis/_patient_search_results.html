@@ -2,7 +2,8 @@
     <ul class="list-group mt-3">
         {% for patient in patients %}
             <li class="list-group-item">
-                <a href="{% url 'dialysis:patient_checklist' patient.id %}">
+                {# --- ALTERAÇÃO AQUI --- #}
+                <a href="{% url 'dialysis:checklist_paciente' patient.id %}">
                     {{ patient.full_name }} (CPF: {{ patient.cpf }}) - {{ patient.clinic.name }}
                 </a>
             </li>

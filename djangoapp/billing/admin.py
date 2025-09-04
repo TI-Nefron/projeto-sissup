@@ -7,36 +7,38 @@ from audit.models import AuditDecision
 
 @admin.register(Payer)
 class PayerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'is_active')
+    list_display = ('name', 'payer_type', 'is_active')
+    list_filter = ('payer_type', 'is_active', 'clinics')
     search_fields = ('name',)
+    filter_horizontal = ('clinics',)
 
 @admin.register(Guide)
 class GuideAdmin(admin.ModelAdmin):
     list_display = (
         'patient',
+        'clinic',
         'guide_type',
         'status',
         'payer',
         'authorization_number',
-        'created_at'
     )
     list_filter = (
         'status',
         'guide_type',
-        'nature',
-        'patient__clinic',
-        'payer'
+        'clinic',
+        'payer',
     )
     search_fields = (
         'patient__full_name',
         'patient__cpf',
-        'authorization_number'
+        'authorization_number',
     )
+    readonly_fields = ('clinic',)
     autocomplete_fields = ('patient', 'payer')
 
     fieldsets = (
         (_('Informações Gerais'), {
-            'fields': ('patient', 'payer', 'guide_type', 'nature', 'status')
+            'fields': ('patient', 'clinic', 'payer', 'guide_type', 'nature', 'status')
         }),
         (_('Detalhes da Autorização'), {
             'fields': ('authorization_number', 'valid_from', 'valid_to')
@@ -46,18 +48,19 @@ class GuideAdmin(admin.ModelAdmin):
     inlines = [DocumentInline]
     actions = ['mark_as_approved', 'mark_as_rejected']
 
-    def save_related(self, request, form, formsets, change):
-        super().save_related(request, form, formsets, change)
-        for formset in formsets:
-            if hasattr(formset, 'new_objects'):
-                instances = formset.save(commit=False)
-                for instance in instances:
-                    if isinstance(instance, Document) and not instance.pk:
-                        instance.created_by = request.user
-                        if hasattr(form.instance, 'patient') and hasattr(form.instance.patient, 'clinic'):
-                            instance.clinic = form.instance.patient.clinic
-                        instance.save()
-                formset.save_m2m()
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            if isinstance(instance, Document) and not instance.pk:
+                instance.created_by = request.user
+                if hasattr(form.instance, 'patient') and hasattr(form.instance.patient, 'clinic'):
+                    instance.clinic = form.instance.patient.clinic
+                instance.save()
+        super().save_formset(request, form, formset, change)
+        formset.save_m2m()
 
     @admin.action(description=_("Marcar selecionadas como APROVADO PELA AUDITORIA"))
     def mark_as_approved(self, request, queryset):

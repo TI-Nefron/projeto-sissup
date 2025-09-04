@@ -7,24 +7,42 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from organization.models import Clinic
 from billing.models import Guide
-from .constants import AllDocumentTypes
 from .storages import PatientDocumentStorage, GuideDocumentStorage
 
-def get_document_storage(instance):
-    if isinstance(instance.content_object, Guide):
-        return GuideDocumentStorage()
-    return PatientDocumentStorage()
+class DocumentType(models.Model):
+    class Category(models.TextChoices):
+        PATIENT = 'PATIENT', _('Documento do Paciente')
+        GUIDE = 'GUIDE', _('Documento de Guia')
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(
+        _("Nome do Tipo de Documento"),
+        max_length=100,
+        unique=True
+    )
+    category = models.CharField(
+        _("Categoria"),
+        max_length=10,
+        choices=Category.choices
+    )
+    is_active = models.BooleanField(_("Ativo"), default=True)
+
+    class Meta:
+        verbose_name = _("Tipo de Documento")
+        verbose_name_plural = _("Tipos de Documentos")
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
 
 class Document(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
     clinic = models.ForeignKey(
         Clinic,
         verbose_name=_("Clínica"),
         on_delete=models.PROTECT,
         related_name="documents"
     )
-
     content_type = models.ForeignKey(
         ContentType,
         verbose_name=_("Tipo do Objeto Pai"),
@@ -34,15 +52,13 @@ class Document(models.Model):
         verbose_name=_("ID do Objeto Pai")
     )
     content_object = GenericForeignKey('content_type', 'object_id')
-
-    type = models.CharField(
+    type = models.ForeignKey(
+        DocumentType,
         verbose_name=_("Tipo do Documento"),
-        max_length=16,
-        choices=AllDocumentTypes
+        on_delete=models.PROTECT
     )
     file = models.FileField(
         verbose_name=_("Arquivo"),
-        storage=get_document_storage,
         upload_to='raw/%Y/%m/%d/'
     )
     sha256 = models.CharField(
@@ -70,8 +86,16 @@ class Document(models.Model):
             models.Index(fields=["content_type", "object_id"]),
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.pk and self.content_object:
+            if isinstance(self.content_object, Guide):
+                self._meta.get_field('file').storage = GuideDocumentStorage()
+            else:
+                self._meta.get_field('file').storage = PatientDocumentStorage()
+
     def __str__(self):
-        return f"{self.get_type_display()} de {self.content_object}" # type: ignore
+        return f"{self.type.name} de {self.content_object}"
 
     def _calculate_hash(self):
         hasher = hashlib.sha256()
@@ -82,10 +106,15 @@ class Document(models.Model):
         return hasher.hexdigest()
 
     def save(self, *args, **kwargs):
-        if self.content_object and hasattr(self.content_object, 'clinic'):
-            self.clinic = self.content_object.clinic
-
         if not self.pk:
+            if self.content_object and hasattr(self.content_object, 'clinic'):
+                self.clinic = self.content_object.clinic
+
+            if isinstance(self.content_object, Guide):
+                self._meta.get_field('file').storage = GuideDocumentStorage()
+            else:
+                self._meta.get_field('file').storage = PatientDocumentStorage()
+            
             self.sha256 = self._calculate_hash()
 
         super().save(*args, **kwargs)
