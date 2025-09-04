@@ -16,6 +16,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -29,18 +30,14 @@ services:
       - "9091:9001"
 
   web:
-    build: ./djangoapp
+    build: ./backend
     command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
-    
     env_file:
       - .env
-      
     volumes:
-      - ./djangoapp:/app
-      
+      - ./backend:/app
     ports:
       - "8001:8000"
-      
     depends_on:
       db:
         condition: service_healthy

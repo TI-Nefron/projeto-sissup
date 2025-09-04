@@ -48,18 +48,15 @@ class GuideAdmin(admin.ModelAdmin):
     inlines = [DocumentInline]
     actions = ['mark_as_approved', 'mark_as_rejected']
 
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
         for instance in instances:
-            if isinstance(instance, Document) and not instance.pk:
+            if not instance.pk and isinstance(instance, Document):
                 instance.created_by = request.user
                 if hasattr(form.instance, 'patient') and hasattr(form.instance.patient, 'clinic'):
                     instance.clinic = form.instance.patient.clinic
-                instance.save()
-        super().save_formset(request, form, formset, change)
+        
+        formset.save()
         formset.save_m2m()
 
     @admin.action(description=_("Marcar selecionadas como APROVADO PELA AUDITORIA"))

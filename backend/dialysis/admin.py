@@ -42,15 +42,12 @@ class PatientAdmin(admin.ModelAdmin):
     
     inlines = [DocumentInline]
 
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
         for instance in instances:
-            if isinstance(instance, Document) and not instance.pk:
+            if not instance.pk and isinstance(instance, Document):
                 instance.created_by = request.user
                 instance.clinic = form.instance.clinic
-                instance.save()
-        super().save_formset(request, form, formset, change)
+        
+        formset.save()
         formset.save_m2m()
