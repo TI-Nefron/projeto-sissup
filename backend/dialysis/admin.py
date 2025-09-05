@@ -43,11 +43,8 @@ class PatientAdmin(admin.ModelAdmin):
     inlines = [DocumentInline]
 
     def save_formset(self, request, form, formset, change):
-        instances = formset.save(commit=False)
-        for instance in instances:
-            if not instance.pk and isinstance(instance, Document):
-                instance.created_by = request.user
-                instance.clinic = form.instance.clinic
-        
-        formset.save()
-        formset.save_m2m()
+        form.instance.save()
+        for instance in formset.save(commit=False):
+            instance.created_by = request.user
+            instance.clinic = form.instance.clinic
+            instance.save()

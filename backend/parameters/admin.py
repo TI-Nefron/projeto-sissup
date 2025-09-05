@@ -1,6 +1,16 @@
-
 from django.contrib import admin
-from .models import ParameterRule
+from .models import ParameterRule, GuideType, ProcedureStatus
+
+@admin.register(GuideType)
+class GuideTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active')
+    search_fields = ('name',)
+
+@admin.register(ProcedureStatus)
+class ProcedureStatusAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_active')
+    search_fields = ('name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
 
 @admin.register(ParameterRule)
 class ParameterRuleAdmin(admin.ModelAdmin):
@@ -24,9 +34,9 @@ class ParameterRuleAdmin(admin.ModelAdmin):
         ('Condições da Regra', {
             'fields': ('is_active', 'payer', 'context')
         }),
-        ('Critérios (Apenas para Guias)', {
+        ('Critérios (Apenas para Guias de Faturamento)', {
             'classes': ('collapse',),
-            'description': 'Preencha apenas se o contexto for "Guia de Faturamento".',
+            'description': 'Estes campos são aplicáveis apenas quando o contexto é "Guia de Faturamento".',
             'fields': ('guide_type', 'nature')
         }),
         ('Documentos Obrigatórios', {

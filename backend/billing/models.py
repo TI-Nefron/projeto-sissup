@@ -41,22 +41,9 @@ class Payer(models.Model):
         return self.name
 
 class Guide(models.Model):
-    class GuideType(models.TextChoices):
-        APAC = 'APAC', _('APAC')
-        SADT = 'SADT', _('Guia SADT')
-        CONSULTA = 'CONSULTA', _('Consulta')
-        INTERNACAO = 'INTERNACAO', _('Internação')
-
     class Nature(models.TextChoices):
         CHRONIC = 'CHRONIC', _('Crônico')
         ACUTE = 'ACUTE', _('Agudo')
-
-    class Status(models.TextChoices):
-        DRAFT = 'DRAFT', _('Rascunho')
-        IN_REVIEW = 'IN_REVIEW', _('Em Auditoria')
-        APPROVED = 'APPROVED', _('Aprovada')
-        BILLED = 'BILLED', _('Faturada')
-        DENIED = 'DENIED', _('Glosada')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
@@ -81,10 +68,10 @@ class Guide(models.Model):
         blank=True
     )
     
-    guide_type = models.CharField(
+    guide_type = models.ForeignKey(
+        'parameters.GuideType',
         verbose_name=_("Tipo de Guia"),
-        max_length=16,
-        choices=GuideType.choices
+        on_delete=models.PROTECT
     )
     nature = models.CharField(
         verbose_name=_("Natureza (Crônico/Agudo)"),
@@ -96,11 +83,12 @@ class Guide(models.Model):
         max_length=50,
         blank=True
     )
-    status = models.CharField(
+    status = models.ForeignKey(
+        'parameters.ProcedureStatus',
         verbose_name=_("Status"),
-        max_length=16,
-        choices=Status.choices,
-        default=Status.DRAFT
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
     )
     
     valid_from = models.DateField(verbose_name=_("Vigência (Início)"), null=True, blank=True)
@@ -117,7 +105,7 @@ class Guide(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.get_guide_type_display()} de {self.patient.full_name} ({self.created_at.strftime('%d/%m/%Y')})" # type: ignore
+        return f"{self.guide_type.name} de {self.patient.full_name} ({self.created_at.strftime('%d/%m/%Y')})"
 
     def save(self, *args, **kwargs):
         if self.patient:

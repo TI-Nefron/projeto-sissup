@@ -107,14 +107,10 @@ class Document(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            if self.content_object and hasattr(self.content_object, 'clinic'):
-                self.clinic = self.content_object.clinic
-
             if isinstance(self.content_object, Guide):
                 self._meta.get_field('file').storage = GuideDocumentStorage()
             else:
                 self._meta.get_field('file').storage = PatientDocumentStorage()
-            
             self.sha256 = self._calculate_hash()
 
         super().save(*args, **kwargs)
