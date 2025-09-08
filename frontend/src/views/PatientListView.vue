@@ -12,8 +12,16 @@
           <v-toolbar-title>Lista de Pacientes</v-toolbar-title>
           <v-divider class="mx-4" inset vertical></v-divider>
           <v-spacer></v-spacer>
-          <v-btn color="primary" dark class="mb-2">Novo Paciente</v-btn>
+          <v-btn color="primary" dark class="mb-2" to="/patients/new">Novo Paciente</v-btn>
         </v-toolbar>
+      </template>
+      <template v-slot:item.actions="{ item }">
+        <v-icon
+          size="small"
+          @click="editPatient(item)"
+        >
+          mdi-pencil
+        </v-icon>
       </template>
     </v-data-table>
   </div>
@@ -21,8 +29,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import apiClient from '@/services/api';
 
+const router = useRouter();
 const patients = ref([]);
 const loading = ref(true);
 const headers = ref([
@@ -32,11 +42,12 @@ const headers = ref([
   { title: 'Clínica', value: 'clinic.name' },
   { title: 'Status', value: 'status' },
   { title: 'Tipo', value: 'patient_type' },
+  { title: 'Ações', value: 'actions', sortable: false },
 ]);
 
 onMounted(async () => {
   try {
-    const response = await apiClient.get('/pacientes/');
+    const response = await apiClient.get('/api/pacientes/');
     patients.value = response.data;
   } catch (error) {
     console.error('Error fetching patients:', error);
@@ -44,4 +55,8 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+const editPatient = (item: any) => {
+  router.push(`/patients/${item.id}/edit`);
+};
 </script>

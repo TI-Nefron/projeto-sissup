@@ -5,6 +5,11 @@ from organization.models import Clinic
 from parameters.models import GuideType, ProcedureStatus
 from documents.serializers import DocumentSerializer
 
+class PayerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payer
+        fields = '__all__'
+
 class PatientNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient

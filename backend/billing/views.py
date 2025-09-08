@@ -23,7 +23,8 @@ class GuideViewSet(viewsets.ModelViewSet):
             'patient', 'clinic', 'payer', 'guide_type', 'status'
         )
 
-class PayerViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Payer.objects.filter(is_active=True)
-    serializer_class = PayerNameSerializer
+class PayerViewSet(viewsets.ModelViewSet):
+    queryset = Payer.objects.all()
+    serializer_class = PayerSerializer
     permission_classes = [IsAuthenticated]
+sses = [IsAuthenticated]
