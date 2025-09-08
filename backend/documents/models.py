@@ -7,7 +7,25 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from organization.models import Clinic
 from billing.models import Guide
-from .storages import PatientDocumentStorage, GuideDocumentStorage
+from .storages import DocumentStorage
+
+from django.utils.text import slugify
+from datetime import datetime
+
+def document_upload_to(instance, filename):
+    clinic_name = slugify(instance.clinic.name)
+    parent_folder = slugify(instance.content_object._meta.verbose_name_plural)
+    
+    # Safely get parent name
+    if hasattr(instance.content_object, 'full_name'):
+        parent_name = slugify(instance.content_object.full_name)
+    else:
+        parent_name = slugify(str(instance.content_object))
+
+    doc_type_slug = slugify(instance.type.name)
+    date_path = datetime.now().strftime('%Y/%m/%d')
+
+    return f'{clinic_name}/{parent_folder}/{parent_name}/{doc_type_slug}/{date_path}/{filename}'
 
 class DocumentType(models.Model):
     class Category(models.TextChoices):
@@ -35,6 +53,8 @@ class DocumentType(models.Model):
     def __str__(self):
         return self.name
 
+document_storage = DocumentStorage()
+
 class Document(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clinic = models.ForeignKey(
@@ -59,7 +79,8 @@ class Document(models.Model):
     )
     file = models.FileField(
         verbose_name=_("Arquivo"),
-        upload_to='raw/%Y/%m/%d/'
+        upload_to=document_upload_to,
+        storage=document_storage
     )
     sha256 = models.CharField(
         verbose_name=_("Hash SHA-256"),
@@ -86,13 +107,7 @@ class Document(models.Model):
             models.Index(fields=["content_type", "object_id"]),
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.pk and self.content_object:
-            if isinstance(self.content_object, Guide):
-                self._meta.get_field('file').storage = GuideDocumentStorage()
-            else:
-                self._meta.get_field('file').storage = PatientDocumentStorage()
+    
 
     def __str__(self):
         return f"{self.type.name} de {self.content_object}"
@@ -107,10 +122,6 @@ class Document(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            if isinstance(self.content_object, Guide):
-                self._meta.get_field('file').storage = GuideDocumentStorage()
-            else:
-                self._meta.get_field('file').storage = PatientDocumentStorage()
             self.sha256 = self._calculate_hash()
 
         super().save(*args, **kwargs)

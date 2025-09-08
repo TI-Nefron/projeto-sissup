@@ -18,17 +18,12 @@ def ensure_minio_buckets_exist():
             secure=settings.MINIO_USE_HTTPS
         )
 
-        required_buckets = [
-            settings.MINIO_BUCKET_PATIENT_DOCS,
-            settings.MINIO_BUCKET_GUIDE_DOCS
-        ]
-
-        for bucket_name in required_buckets:
-            if not client.bucket_exists(bucket_name):
-                client.make_bucket(bucket_name)
-                logger.info(f"MinIO bucket '{bucket_name}' created successfully.")
-            else:
-                logger.info(f"MinIO bucket '{bucket_name}' already exists.")
+        bucket_name = settings.MINIO_BUCKET_NAME
+        if not client.bucket_exists(bucket_name):
+            client.make_bucket(bucket_name)
+            logger.info(f"MinIO bucket '{bucket_name}' created successfully.")
+        else:
+            logger.info(f"MinIO bucket '{bucket_name}' already exists.")
 
     except S3Error as exc:
         logger.error(f"Error communicating with MinIO: {exc}")

@@ -7,3 +7,4 @@ minio
 django-storages
 python-dateutil
 djangorestframework
+django-filter

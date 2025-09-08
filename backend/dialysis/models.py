@@ -24,7 +24,7 @@ class Patient(models.Model):
         Clinic,
         verbose_name=_("Clínica"),
         on_delete=models.PROTECT,
-        related_name="patients"
+        related_name="pacientes"
     )
     full_name = models.CharField(
         verbose_name=_("Nome Completo"),
@@ -51,7 +51,7 @@ class Patient(models.Model):
         'billing.Payer',  # Using string reference to prevent circular import
         verbose_name=_("Pagador (Convênio)"),
         on_delete=models.PROTECT,
-        related_name="patients",
+        related_name="pacientes",
         null=True,
         blank=True
     )
