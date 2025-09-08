@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Guide, Payer
-from .serializers import GuideSerializer, PayerNameSerializer
+from .serializers import GuideSerializer, PayerSerializer, PayerNameSerializer
 from .filters import GuideFilter
 
 class GuideViewSet(viewsets.ModelViewSet):

@@ -5,6 +5,7 @@ import PatientFormView from '../views/PatientFormView.vue';
 import LoginView from '../views/LoginView.vue';
 import LobbyView from '../views/LobbyView.vue';
 import ClinicListView from '../views/ClinicListView.vue';
+import PayerListView from '../views/PayerListView.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const router = createRouter({
