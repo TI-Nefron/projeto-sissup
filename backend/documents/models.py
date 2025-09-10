@@ -77,6 +77,12 @@ class Document(models.Model):
         verbose_name=_("Tipo do Documento"),
         on_delete=models.PROTECT
     )
+    description = models.CharField(
+        _("Descrição"),
+        max_length=255,
+        blank=True,
+        help_text=_("Descrição customizada para o documento, usada para documentos opcionais/outros.")
+    )
     file = models.FileField(
         verbose_name=_("Arquivo"),
         upload_to=document_upload_to,

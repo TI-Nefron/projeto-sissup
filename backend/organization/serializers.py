@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import Clinic
+from audit.mixins import AuditableSerializerMixin
 
-class ClinicSerializer(serializers.ModelSerializer):
+class ClinicSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Clinic
-        fields = ['id', 'name']
+        fields = '__all__'

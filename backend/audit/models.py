@@ -2,8 +2,55 @@ import hashlib
 import json
 import uuid
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+class AuditLog(models.Model):
+    class Action(models.TextChoices):
+        CREATE = 'CREATE', _('Criação')
+        UPDATE = 'UPDATE', _('Atualização')
+        DELETE = 'DELETE', _('Exclusão')
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        verbose_name=_("Usuário"), 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name=_("Timestamp"))
+    action = models.CharField(max_length=10, choices=Action.choices, verbose_name=_("Ação"))
+    
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, verbose_name=_("Tipo de Conteúdo"))
+    object_id = models.CharField(max_length=36, verbose_name=_("ID do Objeto"))
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    object_repr = models.CharField(max_length=200, verbose_name=_("Representação do Objeto"))
+    changes = models.JSONField(verbose_name=_("Alterações"), default=dict)
+
+    class Meta:
+        verbose_name = _("Log de Auditoria")
+        verbose_name_plural = _("Logs de Auditoria")
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f'{self.get_action_display()} em {self.object_repr} por {self.user or "Sistema"}'
+
+def log_change(user, instance, action, changes=None):
+    if not isinstance(instance.pk, uuid.UUID):
+        return
+
+    AuditLog.objects.create(
+        user=user,
+        content_type=ContentType.objects.get_for_model(instance),
+        object_id=str(instance.pk),
+        object_repr=str(instance)[:200],
+        action=action,
+        changes=changes or {}
+    )
 
 class AuditDecision(models.Model):
     """

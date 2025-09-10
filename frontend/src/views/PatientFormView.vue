@@ -52,34 +52,34 @@
           </v-card-text>
         </v-card>
 
-        <!-- Mandatory Documents Card -->
-        <v-card v-if="isNewPatient && mandatoryDocs.length > 0">
-          <v-card-title>Documentos Obrigatórios</v-card-title>
+        <!-- Documents Card -->
+        <v-card class="mb-6">
           <v-card-text>
-            <v-row>
-              <v-col v-for="doc in mandatoryDocs" :key="doc.id" cols="12" md="6">
-                <v-file-input
-                  v-model="uploadedFiles[doc.id]"
-                  :label="doc.name"
-                  :rules="[v => !!v || 'Este documento é obrigatório']"
-                  required
-                  variant="outlined"
-                  density="compact"
-                ></v-file-input>
-              </v-col>
-            </v-row>
+            <MultiDocumentUpload 
+              category="PATIENT" 
+              @update:documents="updateDocuments"
+            />
           </v-card-text>
         </v-card>
 
         <!-- Action Buttons -->
         <v-row class="mt-4">
           <v-col>
-            <v-btn type="submit" color="primary" :disabled="isSaveDisabled">Salvar</v-btn>
+            <v-btn type="submit" color="primary">Salvar</v-btn>
             <v-btn to="/patients" class="ml-2">Cancelar</v-btn>
+            <v-btn v-if="!isNewPatient" @click="showHistory = true" class="ml-2">Histórico</v-btn>
           </v-col>
         </v-row>
       </v-container>
     </v-form>
+
+    <ObjectHistory 
+      v-model="showHistory"
+      :object-id="patient.id"
+      content-type-app-label="dialysis"
+      content-type-model="patient"
+    />
+
   </div>
 </template>
 
@@ -88,20 +88,23 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import apiClient from '@/services/api';
 import { useClinicStore } from '@/stores/clinic';
-import * as adminApi from '@/services/administrationApi';
+import MultiDocumentUpload from '@/components/MultiDocumentUpload.vue';
+import ObjectHistory from '@/components/ObjectHistory.vue';
 
-interface DocumentType {
-  id: string;
-  name: string;
-  category: 'PATIENT' | 'GUIDE';
+interface DocumentData {
+  type: string | null;
+  description: string;
+  file: File[] | null;
 }
 
 const route = useRoute();
 const router = useRouter();
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const apiErrors = ref<Record<string, any>>({});
+const showHistory = ref(false);
 
 const patient = ref({
+  id: '',
   full_name: '',
   cpf: '',
   cns: '',
@@ -111,8 +114,7 @@ const patient = ref({
 });
 
 const clinics = ref<{id: string, name: string}[]>([]);
-const mandatoryDocs = ref<DocumentType[]>([]);
-const uploadedFiles = ref<Record<string, File[]>>({});
+const documentsToUpload = ref<DocumentData[]>([]);
 
 const patientTypes = ref([
     { title: 'Crônico', value: 'CHRONIC' },
@@ -128,23 +130,9 @@ const patientStatuses = ref([
 const formTitle = computed(() => route.params.id ? 'Editar Paciente' : 'Novo Paciente');
 const isNewPatient = computed(() => !route.params.id);
 
-const isSaveDisabled = computed(() => {
-  if (isNewPatient.value) {
-    if (mandatoryDocs.value.length === 0) {
-      return false;
-    }
-    const allFilesUploaded = mandatoryDocs.value.every(doc => {
-      const fileOrFileList = uploadedFiles.value[doc.id];
-      if (Array.isArray(fileOrFileList)) {
-        return fileOrFileList.length > 0;
-      } else {
-        return !!fileOrFileList;
-      }
-    });
-    return !allFilesUploaded;
-  }
-  return false;
-});
+const updateDocuments = (docs: DocumentData[]) => {
+  documentsToUpload.value = docs;
+};
 
 // ... (CPF and CNS rules remain the same) ...
 const cpfRule = (v: string) => { return true; };
@@ -154,7 +142,6 @@ const cnsRule = (v: string) => { return true; };
 watch(() => patient.value.cpf, (newValue) => { /* ... */ });
 watch(() => patient.value.cns, (newValue) => { /* ... */ });
 watch(() => patient.value.full_name, (newValue) => { /* ... */ });
-
 
 onMounted(async () => {
   try {
@@ -177,74 +164,55 @@ onMounted(async () => {
     }
   } else {
     const clinicStore = useClinicStore();
-    console.log('DEBUG: Checking for selected clinic in store.');
     if (clinicStore.selectedClinic) {
-      console.log('DEBUG: Clinic found in store:', clinicStore.selectedClinic);
       patient.value.clinic_id = clinicStore.selectedClinic.id;
-      fetchMandatoryDocs(clinicStore.selectedClinic.id);
     } else {
-      console.error('DEBUG: No clinic selected in store. Cannot fetch mandatory docs.');
+      console.error('DEBUG: No clinic selected in store.');
     }
   }
 });
-
-async function fetchMandatoryDocs(clinicId: string) {
-  console.log(`DEBUG: Fetching mandatory docs for clinic ID: ${clinicId}`);
-  try {
-    const allDocTypesResponse = await apiClient.get<DocumentType[]>('/api/document-types/');
-    console.log('DEBUG: All document types fetched:', allDocTypesResponse.data);
-
-    const mandatoryIdsResponse = await adminApi.getMandatoryDocuments(clinicId);
-    console.log('DEBUG: API response for mandatory IDs:', mandatoryIdsResponse.data);
-    
-    const mandatoryIds = new Set(mandatoryIdsResponse.data);
-    mandatoryDocs.value = allDocTypesResponse.data.filter(doc => 
-      doc.category === 'PATIENT' && mandatoryIds.has(doc.id)
-    );
-    console.log('DEBUG: Final filtered mandatory docs for patient form:', mandatoryDocs.value);
-
-  } catch (error) {
-    console.error('Erro ao buscar documentos obrigatórios:', error);
-  }
-}
 
 const savePatient = async () => {
   apiErrors.value = {};
   if (!form.value) return;
   const { valid } = await form.value.validate();
-  if (!valid || isSaveDisabled.value) {
+  if (!valid) {
     return;
   }
 
+  const formData = new FormData();
+  
+  // Append patient data
+  Object.entries(patient.value).forEach(([key, value]) => {
+    if (value !== null) {
+      formData.append(key, value as string);
+    }
+  });
+
+  // Append documents
+  documentsToUpload.value.forEach((doc, index) => {
+    if (doc.file && doc.file.length > 0 && doc.type) {
+      formData.append(`documents_data[${index}]file`, doc.file[0]);
+      formData.append(`documents_data[${index}]type`, doc.type);
+      if (doc.description) {
+        formData.append(`documents_data[${index}]description`, doc.description);
+      }
+    }
+  });
+
   try {
     if (isNewPatient.value) {
-      const formData = new FormData();
-      Object.entries(patient.value).forEach(([key, value]) => {
-        if (value !== null) {
-          formData.append(key, value as string);
-        }
-      });
-
-      Object.entries(uploadedFiles.value).forEach(([docId, fileOrFileList]) => {
-        if (Array.isArray(fileOrFileList) && fileOrFileList.length > 0) {
-          formData.append(`files[${docId}]`, fileOrFileList[0]);
-        } else if (fileOrFileList) {
-          formData.append(`files[${docId}]`, fileOrFileList as File);
-        }
-      });
-
       await apiClient.post('/api/pacientes/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-
     } else {
-      // Update logic remains the same (for now)
-      const dataToSave = { ...patient.value };
-      dataToSave.cpf = dataToSave.cpf.replace(/\D/g, '');
-      dataToSave.cns = dataToSave.cns.replace(/\D/g, '');
-      await apiClient.put(`/api/pacientes/${route.params.id}/`, dataToSave);
+      await apiClient.put(`/api/pacientes/${route.params.id}/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
     }
     router.push('/patients');
   } catch (error: any) {

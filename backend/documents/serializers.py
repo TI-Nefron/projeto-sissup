@@ -13,17 +13,28 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
-        fields = ['id', 'type', 'file', 'file_url', 'created_at', 'clinic']
+        fields = ['id', 'type', 'description', 'file', 'file_url', 'created_at', 'clinic']
 
     def get_file_url(self, obj):
         return obj.file.url
 
-class DocumentUploadSerializer(serializers.ModelSerializer):
-    content_type_str = serializers.CharField(write_only=True)
+class DocumentCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating documents in a nested context."""
+    description = serializers.CharField(required=False, allow_blank=True)
+    type = serializers.PrimaryKeyRelatedField(queryset=DocumentType.objects.all())
 
     class Meta:
         model = Document
-        fields = ['file', 'type', 'object_id', 'content_type_str', 'clinic']
+        fields = ['file', 'type', 'description']
+
+
+class DocumentUploadSerializer(serializers.ModelSerializer):
+    content_type_str = serializers.CharField(write_only=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = Document
+        fields = ['file', 'type', 'description', 'object_id', 'content_type_str', 'clinic']
 
     def validate(self, data):
         try:

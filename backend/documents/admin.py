@@ -3,6 +3,7 @@ from django.contrib.contenttypes.admin import GenericTabularInline
 from .models import Document, DocumentType
 from billing.models import Guide
 from dialysis.models import Patient
+from audit.models import AuditLog, log_change
 
 @admin.register(DocumentType)
 class DocumentTypeAdmin(admin.ModelAdmin):
@@ -55,3 +56,12 @@ class DocumentAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def delete_model(self, request, obj):
+        log_change(request.user, obj, AuditLog.Action.DELETE)
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            log_change(request.user, obj, AuditLog.Action.DELETE)
+        super().delete_queryset(request, queryset)

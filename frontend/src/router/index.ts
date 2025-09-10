@@ -9,6 +9,7 @@ import PayerListView from '../views/PayerListView.vue';
 import PatientHistoryView from '../views/PatientHistoryView.vue';
 import ClinicSelectionView from '../views/ClinicSelectionView.vue';
 import ParameterizationView from '../views/ParameterizationView.vue';
+import AuditLogView from '../views/AuditLogView.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useClinicStore } from '@/stores/clinic';
 
@@ -88,6 +89,12 @@ const router = createRouter({
       path: '/parameterization',
       name: 'parameterization',
       component: ParameterizationView,
+      meta: { requiresAuth: true, requiresSuperuser: true },
+    },
+    {
+      path: '/audit-logs',
+      name: 'audit-logs',
+      component: AuditLogView,
       meta: { requiresAuth: true, requiresSuperuser: true },
     },
   ],

@@ -58,13 +58,18 @@
               v-for="doc in selectedPatientDocuments"
               :key="doc.id"
             >
-              <v-list-item-title>{{ doc.type.name }}</v-list-item-title>
-              <v-list-item-subtitle>{{ new Date(doc.created_at).toLocaleDateString() }}</v-list-item-subtitle>
+              <v-list-item-title>
+                {{ doc.type.name.startsWith('Outro') ? doc.description : doc.type.name }}
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                <span v-if="doc.type.name.startsWith('Outro')">({{ doc.type.name }}) - </span>
+                {{ new Date(doc.created_at).toLocaleDateString() }}
+              </v-list-item-subtitle>
               <template v-slot:append>
                 <v-btn icon @click="openPreview(doc)" variant="text" size="small">
                   <v-icon>mdi-eye-outline</v-icon>
                 </v-btn>
-                <v-btn icon :href="`http://localhost:9090${doc.file_url}`" target="_blank" variant="text" size="small">
+                <v-btn icon :href="doc.file_url.replace('http://minio:9000', 'http://localhost:9090')" target="_blank" variant="text" size="small">
                   <v-icon>mdi-download-outline</v-icon>
                 </v-btn>
               </template>
@@ -92,16 +97,16 @@
     </v-dialog>
 
     <!-- Document Preview Dialog -->
-    <v-dialog v-model="previewDialog" max-width="90vw" max-height="90vh">
+    <v-dialog v-model="previewDialog" fullscreen>
         <v-card>
-            <v-card-title class="d-flex justify-space-between">
-                <span>{{ selectedDocForPreview?.type.name }}</span>
-                <v-btn icon @click="previewDialog = false" variant="text">
+            <v-toolbar dark color="primary">
+                <v-btn icon dark @click="previewDialog = false">
                     <v-icon>mdi-close</v-icon>
                 </v-btn>
-            </v-card-title>
-            <v-card-text class="pa-0">
-                <embed v-if="selectedDocForPreview" :src="`http://localhost:9090${selectedDocForPreview.file_url}`" type="application/pdf" width="100%" height="80vh" />
+                <v-toolbar-title>{{ selectedDocForPreview?.type.name }}</v-toolbar-title>
+            </v-toolbar>
+            <v-card-text class="pa-0" style="height: calc(100vh - 64px);">
+                <embed v-if="selectedDocForPreview" :src="selectedDocForPreview.file_url.replace('http://minio:9000', 'http://localhost:9090')" type="application/pdf" width="100%" height="100%" />
             </v-card-text>
         </v-card>
     </v-dialog>
@@ -117,7 +122,7 @@ import { useClinicStore } from '@/stores/clinic';
 
 // Interfaces
 interface DocumentType { id: string; name: string; }
-interface Document { id: string; type: DocumentType; file_url: string; created_at: string; }
+interface Document { id: string; type: DocumentType; description?: string; file_url: string; created_at: string; }
 interface Clinic { id: string; name: string; }
 interface Patient { id: string; full_name: string; cpf: string; cns: string; clinic: Clinic; status: string; patient_type: string; documents: Document[]; }
 

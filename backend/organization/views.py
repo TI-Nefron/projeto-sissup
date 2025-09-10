@@ -5,8 +5,9 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.urls import reverse
 from .models import Clinic
 from .serializers import ClinicSerializer
+from audit.mixins import AuditableViewSetMixin
 
-class ClinicViewSet(viewsets.ModelViewSet):
+class ClinicViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = Clinic.objects.all()
     serializer_class = ClinicSerializer
     permission_classes = [IsAdminUser]

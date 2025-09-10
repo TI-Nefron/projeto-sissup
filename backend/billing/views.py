@@ -3,16 +3,15 @@ from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Guide, Payer
-from .serializers import GuideSerializer, PayerSerializer, PayerNameSerializer
+from .serializers import GuideSerializer, PayerSerializer
 from .filters import GuideFilter
-from documents.models import Document, DocumentType
 from organization.models import Clinic
+from audit.mixins import AuditableViewSetMixin
 
-class GuideViewSet(viewsets.ModelViewSet):
+class GuideViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     serializer_class = GuideSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
@@ -31,7 +30,9 @@ class GuideViewSet(viewsets.ModelViewSet):
 
         user_clinics = user.clinics.all()
         if not clinic_id:
-            return Guide.objects.none()
+            return Guide.objects.filter(clinic__in=user_clinics).select_related(
+                'patient', 'clinic', 'payer', 'guide_type', 'status'
+            )
 
         try:
             requested_clinic = user_clinics.get(id=clinic_id)
@@ -55,44 +56,9 @@ class GuideViewSet(viewsets.ModelViewSet):
         if not request.user.is_superuser and clinic not in request.user.clinics.all():
             return Response({"detail": "You do not have permission to create a guide in this clinic."}, status=status.HTTP_403_FORBIDDEN)
 
-        mandatory_docs = clinic.mandatory_document_types.filter(category=DocumentType.Category.GUIDE)
-        errors = {}
-        for doc_type in mandatory_docs:
-            if f'files[{doc_type.id}]' not in request.FILES:
-                errors[doc_type.name] = f"Documento '{doc_type.name}' é obrigatório."
-        
-        if errors:
-            return Response({"mandatory_documents": errors}, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
 
-        guide_serializer = self.get_serializer(data=request.data)
-        guide_serializer.is_valid(raise_exception=True)
-
-        try:
-            with transaction.atomic():
-                guide = guide_serializer.save()
-
-                for key, uploaded_file in request.FILES.items():
-                    if key.startswith('files[') and key.endswith(']'):
-                        doc_type_id = key[6:-1]
-                        try:
-                            doc_type = DocumentType.objects.get(id=doc_type_id)
-                            Document.objects.create(
-                                clinic=clinic,
-                                content_object=guide,
-                                type=doc_type,
-                                file=uploaded_file,
-                                created_by=request.user
-                            )
-                        except DocumentType.DoesNotExist:
-                            pass
-            
-            headers = self.get_success_headers(guide_serializer.data)
-            return Response(guide_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class PayerViewSet(viewsets.ModelViewSet):
+class PayerViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = Payer.objects.all()
     serializer_class = PayerSerializer
     permission_classes = [IsAdminUser]

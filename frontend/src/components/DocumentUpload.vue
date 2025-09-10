@@ -13,6 +13,14 @@
             required
           ></v-select>
         </v-col>
+        <v-col v-if="showDescription" cols="12">
+          <v-text-field
+            v-model="description"
+            label="Descrição do Documento"
+            :rules="[requiredRule]"
+            required
+          ></v-text-field>
+        </v-col>
         <v-col cols="12">
           <v-file-input
             v-model="selectedFile"
@@ -37,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineProps, defineEmits } from 'vue';
+import { ref, onMounted, defineProps, defineEmits, computed } from 'vue';
 import apiClient from '@/services/api';
 
 interface DocumentType {
@@ -58,11 +66,18 @@ const valid = ref(true);
 const loading = ref(false);
 const documentTypes = ref<DocumentType[]>([]);
 const selectedDocumentType = ref<string | null>(null);
+const description = ref('');
 const selectedFile = ref<File | null>(null);
 const message = ref<string | null>(null);
 const messageType = ref<'success' | 'error'>('success');
 
 const requiredRule = (v: any) => !!v || 'Este campo é obrigatório';
+
+const showDescription = computed(() => {
+  if (!selectedDocumentType.value) return false;
+  const selectedType = documentTypes.value.find(t => t.id === selectedDocumentType.value);
+  return selectedType?.name.startsWith('Outro') ?? false;
+});
 
 const fetchDocumentTypes = async () => {
   try {
@@ -89,6 +104,9 @@ const upload = async () => {
   formData.append('object_id', props.object_id);
   formData.append('content_type_str', props.content_type_str);
   formData.append('clinic', props.clinic_id);
+  if (showDescription.value && description.value) {
+    formData.append('description', description.value);
+  }
 
   try {
     await apiClient.post('/api/documents/upload/', formData, {
@@ -99,6 +117,7 @@ const upload = async () => {
     message.value = 'Arquivo enviado com sucesso!';
     messageType.value = 'success';
     emit('upload-completed');
+    description.value = '';
     form.value.reset();
   } catch (error) {
     console.error('Erro ao enviar documento:', error);

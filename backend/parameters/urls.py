@@ -7,6 +7,7 @@ app_name = 'parameters'
 router = DefaultRouter()
 router.register(r'guide-types', views.GuideTypeViewSet, basename='guidetype')
 router.register(r'procedure-statuses', views.ProcedureStatusViewSet, basename='procedurestatus')
+router.register(r'parameter-rules', views.ParameterRuleViewSet, basename='parameterrule')
 
 urlpatterns = [
     path('', include(router.urls)),

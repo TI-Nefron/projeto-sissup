@@ -94,8 +94,13 @@
               <template v-slot:prepend>
                 <v-checkbox v-model="selectedDocuments" :value="doc"></v-checkbox>
               </template>
-              <v-list-item-title>{{ doc.type.name }}</v-list-item-title>
-              <v-list-item-subtitle>{{ new Date(doc.created_at).toLocaleDateString() }}</v-list-item-subtitle>
+              <v-list-item-title>
+                {{ doc.type.name.startsWith('Outro') ? doc.description : doc.type.name }}
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                <span v-if="doc.type.name.startsWith('Outro')">({{ doc.type.name }}) - </span>
+                {{ new Date(doc.created_at).toLocaleDateString() }}
+              </v-list-item-subtitle>
             </v-list-item>
           </v-list>
           <v-alert v-else type="info" text="Nenhum documento encontrado para esta guia."></v-alert>
@@ -144,6 +149,7 @@ interface DocumentType {
 interface Document {
   id: string;
   type: DocumentType;
+  description?: string;
   file_url: string;
   created_at: string;
 }
@@ -334,8 +340,8 @@ const showDocuments = (guide: Guide) => {
 
 const compareDocuments = () => {
   if (selectedDocuments.value.length === 2) {
-    doc1url.value = 'http://localhost:9090' + selectedDocuments.value[0].file_url;
-    doc2url.value = 'http://localhost:9090' + selectedDocuments.value[1].file_url;
+    doc1url.value = selectedDocuments.value[0].file_url.replace('http://minio:9000', 'http://localhost:9090');
+    doc2url.value = selectedDocuments.value[1].file_url.replace('http://minio:9000', 'http://localhost:9090');
     viewerDialog.value = true;
   }
 };

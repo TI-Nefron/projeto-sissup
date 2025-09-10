@@ -1,17 +1,23 @@
 from rest_framework import viewsets
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from .models import GuideType, ProcedureStatus
-from .serializers import GuideTypeSerializer, ProcedureStatusSerializer
+from .models import GuideType, ProcedureStatus, ParameterRule
+from .serializers import GuideTypeSerializer, ProcedureStatusSerializer, ParameterRuleSerializer
+from audit.mixins import AuditableViewSetMixin
 
-class GuideTypeViewSet(viewsets.ModelViewSet):
+class GuideTypeViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = GuideType.objects.all()
     serializer_class = GuideTypeSerializer
     permission_classes = [IsAdminUser]
 
-class ProcedureStatusViewSet(viewsets.ModelViewSet):
+class ProcedureStatusViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = ProcedureStatus.objects.all()
     serializer_class = ProcedureStatusSerializer
+    permission_classes = [IsAdminUser]
+
+class ParameterRuleViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
+    queryset = ParameterRule.objects.all()
+    serializer_class = ParameterRuleSerializer
     permission_classes = [IsAdminUser]
 
 class ClinicGuideTypeListView(ListAPIView):

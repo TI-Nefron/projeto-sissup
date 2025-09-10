@@ -45,34 +45,34 @@
           </v-card-text>
         </v-card>
 
-        <!-- Mandatory Documents Card -->
-        <v-card v-if="isNewGuide && mandatoryDocs.length > 0">
-          <v-card-title>Documentos Obrigatórios</v-card-title>
+        <!-- Documents Card -->
+        <v-card class="mb-6">
           <v-card-text>
-            <v-row>
-              <v-col v-for="doc in mandatoryDocs" :key="doc.id" cols="12" md="6">
-                <v-file-input
-                  v-model="uploadedFiles[doc.id]"
-                  :label="doc.name"
-                  :rules="[v => !!v || 'Este documento é obrigatório']"
-                  required
-                  variant="outlined"
-                  density="compact"
-                ></v-file-input>
-              </v-col>
-            </v-row>
+            <MultiDocumentUpload 
+              category="GUIDE" 
+              @update:documents="updateDocuments"
+            />
           </v-card-text>
         </v-card>
 
         <!-- Action Buttons -->
         <v-row class="mt-4">
           <v-col>
-            <v-btn type="submit" color="primary" :disabled="isSaveDisabled">Salvar</v-btn>
+            <v-btn type="submit" color="primary">Salvar</v-btn>
             <v-btn to="/guides" class="ml-2">Cancelar</v-btn>
+            <v-btn v-if="!isNewGuide" @click="showHistory = true" class="ml-2">Histórico</v-btn>
           </v-col>
         </v-row>
       </v-container>
     </v-form>
+
+    <ObjectHistory 
+      v-model="showHistory"
+      :object-id="guide.id"
+      content-type-app-label="billing"
+      content-type-model="guide"
+    />
+
   </v-container>
 </template>
 
@@ -81,16 +81,22 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import apiClient from '@/services/api';
 import { useClinicStore } from '@/stores/clinic';
-import * as adminApi from '@/services/administrationApi';
+import MultiDocumentUpload from '@/components/MultiDocumentUpload.vue';
+import ObjectHistory from '@/components/ObjectHistory.vue';
 
 // Interfaces
-interface DocumentType { id: string; name: string; category: 'PATIENT' | 'GUIDE'; }
+interface DocumentData {
+  type: string | null;
+  description: string;
+  file: File[] | null;
+}
 interface Clinic { id: string; name: string; }
 interface Patient { id: string; full_name: string; clinic: Clinic; }
 interface Payer { id: string; name: string; }
 interface GuideType { id: string; name: string; }
 interface ProcedureStatus { id: string; name: string; }
 interface Guide {
+  id: string;
   patient: string | null;
   clinic: string | null;
   clinic_name: string;
@@ -108,7 +114,8 @@ const router = useRouter();
 const clinicStore = useClinicStore();
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
-const guide = ref<Guide>({ patient: null, clinic: null, clinic_name: '', payer: null, guide_type: null, nature: 'CHRONIC', authorization_number: '', status: null, valid_from: null, valid_to: null });
+const guide = ref<Guide>({ id: '', patient: null, clinic: null, clinic_name: '', payer: null, guide_type: null, nature: 'CHRONIC', authorization_number: '', status: null, valid_from: null, valid_to: null });
+const showHistory = ref(false);
 
 // Data for select boxes
 const patients = ref<Patient[]>([]);
@@ -116,23 +123,15 @@ const payers = ref<Payer[]>([]);
 const guideTypes = ref<GuideType[]>([]);
 const statuses = ref<ProcedureStatus[]>([]);
 const natureOptions = ref([{ title: 'Crônico', value: 'CHRONIC' }, { title: 'Agudo', value: 'ACUTE' }]);
-
-// Mandatory Docs
-const mandatoryDocs = ref<DocumentType[]>([]);
-const uploadedFiles = ref<Record<string, File[]>>({});
+const documentsToUpload = ref<DocumentData[]>([]);
 
 const formTitle = computed(() => (route.params.id ? 'Editar Guia' : 'Nova Guia'));
 const isNewGuide = computed(() => !route.params.id);
 const requiredRule = (v: string | null) => !!v || 'Este campo é obrigatório';
 
-const isSaveDisabled = computed(() => {
-  if (isNewGuide.value) {
-    if (mandatoryDocs.value.length === 0) return false;
-    const allFilesUploaded = mandatoryDocs.value.every(doc => uploadedFiles.value[doc.id] && uploadedFiles.value[doc.id].length > 0);
-    return !allFilesUploaded;
-  }
-  return false;
-});
+const updateDocuments = (docs: DocumentData[]) => {
+  documentsToUpload.value = docs;
+};
 
 watch(() => guide.value.patient, (patientId) => {
   if (patientId) {
@@ -162,18 +161,6 @@ const fetchRelatedData = async () => {
   } catch (error) { console.error('Erro ao buscar dados relacionados:', error); }
 };
 
-async function fetchMandatoryDocs(clinicId: string) {
-  try {
-    const allDocTypesResponse = await apiClient.get<DocumentType[]>('/api/document-types/');
-    const mandatoryIdsResponse = await adminApi.getMandatoryDocuments(clinicId);
-    
-    const mandatoryIds = new Set(mandatoryIdsResponse.data);
-    mandatoryDocs.value = allDocTypesResponse.data.filter(doc => 
-      doc.category === 'GUIDE' && mandatoryIds.has(doc.id)
-    );
-  } catch (error) { console.error('Erro ao buscar documentos obrigatórios:', error); }
-}
-
 onMounted(async () => {
   const clinicId = clinicStore.selectedClinic?.id;
   await fetchRelatedData();
@@ -186,32 +173,39 @@ onMounted(async () => {
       guide.value = { ...data, patient: data.patient.id, payer: data.payer.id, guide_type: data.guide_type.id, status: data.status.id, clinic_name: data.clinic.name };
     } catch (error) { console.error('Erro ao buscar guia:', error); }
   } else if (clinicId) {
-    // It's a new guide, fetch mandatory docs
     guide.value.clinic = clinicId;
     guide.value.clinic_name = clinicStore.selectedClinic?.name || '';
-    await fetchMandatoryDocs(clinicId);
   }
 });
 
 const saveGuide = async () => {
   if (!form.value) return;
   const { valid } = await form.value.validate();
-  if (!valid || isSaveDisabled.value) return;
+  if (!valid) return;
+
+  const formData = new FormData();
+  
+  // Append guide data
+  Object.entries(guide.value).forEach(([key, value]) => {
+    if (value !== null) formData.append(key, value as string);
+  });
+
+  // Append documents
+  documentsToUpload.value.forEach((doc, index) => {
+    if (doc.file && doc.file.length > 0 && doc.type) {
+      formData.append(`documents_data[${index}]file`, doc.file[0]);
+      formData.append(`documents_data[${index}]type`, doc.type);
+      if (doc.description) {
+        formData.append(`documents_data[${index}]description`, doc.description);
+      }
+    }
+  });
 
   try {
     if (isNewGuide.value) {
-      const formData = new FormData();
-      Object.entries(guide.value).forEach(([key, value]) => {
-        if (value !== null) formData.append(key, value as string);
-      });
-
-      Object.entries(uploadedFiles.value).forEach(([docId, fileList]) => {
-        if (fileList && fileList.length > 0) formData.append(`files[${docId}]`, fileList[0]);
-      });
-
       await apiClient.post('/api/billing/guides/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
     } else {
-      await apiClient.put(`/api/billing/guides/${route.params.id}/`, guide.value);
+      await apiClient.put(`/api/billing/guides/${route.params.id}/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
     }
     router.push('/guides');
   } catch (error) { console.error('Erro ao salvar guia:', error); }
