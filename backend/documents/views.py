@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, permissions
 from .serializers import DocumentUploadSerializer, DocumentTypeSerializer
 from .models import DocumentType
 
@@ -16,6 +16,7 @@ class DocumentUploadView(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class DocumentTypeViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = DocumentType.objects.filter(is_active=True)
+class DocumentTypeViewSet(viewsets.ModelViewSet):
+    queryset = DocumentType.objects.all()
     serializer_class = DocumentTypeSerializer
+    permission_classes = [permissions.IsAdminUser]

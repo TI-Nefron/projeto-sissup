@@ -21,6 +21,13 @@ class Clinic(models.Model):
         default=True
     )
 
+    mandatory_document_types = models.ManyToManyField(
+        'documents.DocumentType',
+        verbose_name=_("Tipos de Documentos Obrigatórios"),
+        blank=True,
+        related_name="mandating_clinics"
+    )
+
     class Meta:
         verbose_name = _("Clínica")
         verbose_name_plural = _("Clínicas")

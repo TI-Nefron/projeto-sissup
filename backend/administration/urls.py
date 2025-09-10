@@ -6,7 +6,8 @@ from .views import (
     GuideTypeViewSet,
     ProcedureStatusViewSet,
     ExitTypeViewSet,
-    RoleViewSet
+    RoleViewSet,
+    ClinicMandatoryDocumentsView
 )
 
 router = DefaultRouter()
@@ -18,5 +19,6 @@ router.register(r'exit-types', ExitTypeViewSet)
 router.register(r'roles', RoleViewSet)
 
 urlpatterns = [
+    path('clinics/<uuid:clinic_id>/mandatory-documents/', ClinicMandatoryDocumentsView.as_view(), name='clinic-mandatory-documents'),
     path('', include(router.urls)),
 ]

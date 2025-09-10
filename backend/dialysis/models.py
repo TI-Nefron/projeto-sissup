@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from organization.models import Clinic
+from django.contrib.contenttypes.fields import GenericRelation
 
 class ExitType(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -89,6 +90,7 @@ class Patient(models.Model):
 
     created_at = models.DateTimeField(verbose_name=_("Data de Criação"), auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name=_("Última Atualização"), auto_now=True)
+    documents = GenericRelation('documents.Document')
     
     class Meta:
         verbose_name = _("Paciente")

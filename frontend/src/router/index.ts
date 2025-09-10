@@ -106,18 +106,15 @@ router.beforeEach(async (to, from, next) => {
   const isSuperuser = authStore.user?.is_superuser;
 
   if (requiresAuth && !isAuthenticated) {
-    // 1. If route requires auth and user is not logged in, redirect to login.
+    // 1. If route requires auth and user is not logged in, clear any lingering
+    // clinic selection and redirect to login.
+    clinicStore.clearClinic();
     return next({ name: 'login' });
   }
 
   if (requiresSuperuser && !isSuperuser) {
     // If route requires superuser and user is not one, redirect to lobby.
     return next({ name: 'lobby' });
-  }
-
-  if (requiresAuth && !isAuthenticated) {
-    // 1. If route requires auth and user is not logged in, redirect to login.
-    return next({ name: 'login' });
   }
 
   if (isAuthenticated && to.name === 'login') {

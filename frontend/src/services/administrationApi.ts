@@ -73,3 +73,7 @@ export const getUsers = () => apiClient.get<User[]>('/api/administration/users/'
 export const createUser = (data: Partial<User>) => apiClient.post<User>('/api/administration/users/', data);
 export const updateUser = (id: string, data: Partial<User>) => apiClient.put<User>(`/api/administration/users/${id}/`, data);
 export const deleteUser = (id: string) => apiClient.delete(`/api/administration/users/${id}/`);
+
+// Mandatory Documents API
+export const getMandatoryDocuments = (clinicId: string) => apiClient.get<string[]>(`/api/administration/clinics/${clinicId}/mandatory-documents/`);
+export const setMandatoryDocuments = (clinicId: string, documentTypeIds: string[]) => apiClient.post(`/api/administration/clinics/${clinicId}/mandatory-documents/`, { document_type_ids: documentTypeIds });

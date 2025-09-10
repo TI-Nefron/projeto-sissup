@@ -11,7 +11,7 @@
       <v-toolbar-title>Lista de Pacientes</v-toolbar-title>
       <v-divider class="mx-4" inset vertical></v-divider>
       <v-spacer></v-spacer>
-      <v-btn color="primary" dark class="mb-2" :to="`/patients/new?clinicId=${clinicStore.selectedClinic?.id}`">Novo Paciente</v-btn>
+      <v-btn color="primary" dark class="mb-2" to="/patients/new">Novo Paciente</v-btn>
     </v-toolbar>
 
     <!-- Skeleton Loader -->
@@ -46,7 +46,7 @@
       </template>
     </v-data-table>
 
-    <!-- Document Dialog -->
+    <!-- Document List Dialog -->
     <v-dialog v-model="documentDialog" max-width="800px">
       <v-card>
         <v-card-title>
@@ -61,8 +61,11 @@
               <v-list-item-title>{{ doc.type.name }}</v-list-item-title>
               <v-list-item-subtitle>{{ new Date(doc.created_at).toLocaleDateString() }}</v-list-item-subtitle>
               <template v-slot:append>
+                <v-btn icon @click="openPreview(doc)" variant="text" size="small">
+                  <v-icon>mdi-eye-outline</v-icon>
+                </v-btn>
                 <v-btn icon :href="`http://localhost:9090${doc.file_url}`" target="_blank" variant="text" size="small">
-                  <v-icon>mdi-open-in-new</v-icon>
+                  <v-icon>mdi-download-outline</v-icon>
                 </v-btn>
               </template>
             </v-list-item>
@@ -88,6 +91,21 @@
       </v-card>
     </v-dialog>
 
+    <!-- Document Preview Dialog -->
+    <v-dialog v-model="previewDialog" max-width="90vw" max-height="90vh">
+        <v-card>
+            <v-card-title class="d-flex justify-space-between">
+                <span>{{ selectedDocForPreview?.type.name }}</span>
+                <v-btn icon @click="previewDialog = false" variant="text">
+                    <v-icon>mdi-close</v-icon>
+                </v-btn>
+            </v-card-title>
+            <v-card-text class="pa-0">
+                <embed v-if="selectedDocForPreview" :src="`http://localhost:9090${selectedDocForPreview.file_url}`" type="application/pdf" width="100%" height="80vh" />
+            </v-card-text>
+        </v-card>
+    </v-dialog>
+
   </div>
 </template>
 
@@ -98,42 +116,23 @@ import DocumentUpload from '@/components/DocumentUpload.vue';
 import { useClinicStore } from '@/stores/clinic';
 
 // Interfaces
-interface DocumentType {
-  id: string;
-  name: string;
-}
-
-interface Document {
-  id: string;
-  type: DocumentType;
-  file_url: string;
-  created_at: string;
-}
-
-interface Clinic {
-  id: string;
-  name: string;
-}
-
-interface Patient {
-  id: string;
-  full_name: string;
-  cpf: string;
-  cns: string;
-  clinic: Clinic;
-  status: string;
-  patient_type: string;
-  documents: Document[];
-}
+interface DocumentType { id: string; name: string; }
+interface Document { id: string; type: DocumentType; file_url: string; created_at: string; }
+interface Clinic { id: string; name: string; }
+interface Patient { id: string; full_name: string; cpf: string; cns: string; clinic: Clinic; status: string; patient_type: string; documents: Document[]; }
 
 const clinicStore = useClinicStore();
 
 const patients = ref<Patient[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
+
+// Document Dialogs State
 const documentDialog = ref(false);
 const selectedPatient = ref<Patient | null>(null);
 const selectedPatientDocuments = ref<Document[]>([]);
+const previewDialog = ref(false);
+const selectedDocForPreview = ref<Document | null>(null);
 
 const headers = ref([
   { title: 'Nome Completo', value: 'full_name' },
@@ -152,9 +151,7 @@ const fetchPatients = async () => {
   }
   loading.value = true;
   try {
-    const response = await apiClient.get<Patient[]>('/api/pacientes/', {
-      params: { clinic: clinicStore.selectedClinic.id }
-    });
+    const response = await apiClient.get<Patient[]>('/api/pacientes/', { params: { clinic: clinicStore.selectedClinic.id } });
     patients.value = response.data;
   } catch (err) {
     console.error('Erro ao buscar pacientes:', err);
@@ -210,7 +207,6 @@ const formatCNS = (cns: string) => {
 
 onMounted(fetchPatients);
 
-// Recarrega os pacientes se a clínica selecionada mudar
 watch(() => clinicStore.selectedClinic, (newClinic, oldClinic) => {
   if (newClinic && newClinic.id !== oldClinic?.id) {
     fetchPatients();
@@ -223,18 +219,20 @@ const showDocuments = (patient: Patient) => {
   documentDialog.value = true;
 };
 
+const openPreview = (doc: Document) => {
+    selectedDocForPreview.value = doc;
+    previewDialog.value = true;
+}
+
 const onUploadCompleted = async () => {
-  // Refetch the specific patient's data to get the updated document list
   const currentPatient = selectedPatient.value;
   if (currentPatient) {
     try {
       const response = await apiClient.get<Patient>(`/api/pacientes/${currentPatient.id}/`);
-      // Find the patient in the main list and update it
       const index = patients.value.findIndex(p => p.id === currentPatient.id);
       if (index !== -1) {
         patients.value[index] = response.data;
       }
-      // Update the documents in the dialog
       selectedPatientDocuments.value = response.data.documents || [];
     } catch (error) {
       console.error('Erro ao recarregar dados do paciente:', error);

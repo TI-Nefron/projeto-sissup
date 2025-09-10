@@ -58,11 +58,11 @@ const valid = ref(true);
 const loading = ref(false);
 const documentTypes = ref<DocumentType[]>([]);
 const selectedDocumentType = ref<string | null>(null);
-const selectedFile = ref<File[]>([]);
+const selectedFile = ref<File | null>(null);
 const message = ref<string | null>(null);
 const messageType = ref<'success' | 'error'>('success');
 
-const requiredRule = (v: string | number | File[]) => !!v || 'Este campo é obrigatório';
+const requiredRule = (v: any) => !!v || 'Este campo é obrigatório';
 
 const fetchDocumentTypes = async () => {
   try {
@@ -78,13 +78,13 @@ onMounted(fetchDocumentTypes);
 const upload = async () => {
   if (!form.value) return;
   const { valid } = await form.value.validate();
-  if (!valid) return;
+  if (!valid || !selectedFile.value) return;
 
   loading.value = true;
   message.value = null;
 
   const formData = new FormData();
-  formData.append('file', selectedFile.value[0]);
+  formData.append('file', selectedFile.value);
   formData.append('type', selectedDocumentType.value!);
   formData.append('object_id', props.object_id);
   formData.append('content_type_str', props.content_type_str);

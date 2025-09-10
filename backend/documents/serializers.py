@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 class DocumentTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentType
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'category']
 
 class DocumentSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
