@@ -6,7 +6,7 @@ from documents.models import Document, DocumentType
 from django.db import transaction
 from audit.mixins import AuditableSerializerMixin
 
-class ExitTypeSerializer(serializers.ModelSerializer):
+class ExitTypeSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ExitType
         fields = ['id', 'name', 'code', 'clinics']
@@ -77,7 +77,7 @@ class PatientSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
         self._create_documents(patient, documents_data)
         return patient
 
-class PatientHistorySerializer(serializers.ModelSerializer):
+class PatientHistorySerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     exit_type = ExitTypeSerializer(read_only=True)
     exit_type_id = serializers.PrimaryKeyRelatedField(
         queryset=ExitType.objects.all(), source='exit_type', write_only=True, allow_null=True

@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from .models import Document, DocumentType
 from django.contrib.contenttypes.models import ContentType
+from audit.mixins import AuditableSerializerMixin
 
-class DocumentTypeSerializer(serializers.ModelSerializer):
+class DocumentTypeSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = DocumentType
         fields = ['id', 'name', 'category']

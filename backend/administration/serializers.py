@@ -4,20 +4,21 @@ from organization.models import Clinic
 from parameters.models import GuideType, ProcedureStatus
 from dialysis.models import ExitType
 from accounts.models import Role, Permission
+from audit.mixins import AuditableSerializerMixin
 
 User = get_user_model()
 
-class PermissionSerializer(serializers.ModelSerializer):
+class PermissionSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = '__all__'
 
-class RoleSerializer(serializers.ModelSerializer):
+class RoleSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = '__all__'
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'is_superuser', 'clinics', 'roles', 'password']
@@ -45,22 +46,22 @@ class UserSerializer(serializers.ModelSerializer):
 
         return user
 
-class ClinicSerializer(serializers.ModelSerializer):
+class ClinicSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Clinic
         fields = '__all__'
 
-class GuideTypeSerializer(serializers.ModelSerializer):
+class GuideTypeSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = GuideType
         fields = '__all__'
 
-class ProcedureStatusSerializer(serializers.ModelSerializer):
+class ProcedureStatusSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ProcedureStatus
         fields = '__all__'
 
-class ExitTypeSerializer(serializers.ModelSerializer):
+class ExitTypeSerializer(AuditableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ExitType
         fields = '__all__'

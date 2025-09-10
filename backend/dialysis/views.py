@@ -8,7 +8,7 @@ from .serializers import PatientSerializer, PatientHistorySerializer, ExitTypeSe
 from organization.models import Clinic
 from audit.mixins import AuditableViewSetMixin
 
-class ExitTypeViewSet(viewsets.ModelViewSet):
+class ExitTypeViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = ExitType.objects.all()
     serializer_class = ExitTypeSerializer
     permission_classes = [IsAdminUser]
@@ -57,7 +57,7 @@ class PatientViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
         
         return super().create(request, *args, **kwargs)
 
-class PatientHistoryViewSet(viewsets.ModelViewSet):
+class PatientHistoryViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     serializer_class = PatientHistorySerializer
     permission_classes = [IsAuthenticated]
 

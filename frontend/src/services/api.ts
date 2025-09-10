@@ -26,11 +26,10 @@ function getCookie(name: string): string | null {
 
 // Add a request interceptor to include the CSRF token
 apiClient.interceptors.request.use((config) => {
-  if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method)) {
-    const csrfToken = getCookie('csrftoken');
-    if (csrfToken) {
-      config.headers['X-CSRFToken'] = csrfToken;
-    }
+  // Always send CSRF token for any state-changing method, and for GET to ensure session integrity
+  const csrfToken = getCookie('csrftoken');
+  if (csrfToken) {
+    config.headers['X-CSRFToken'] = csrfToken;
   }
   return config;
 }, (error) => {

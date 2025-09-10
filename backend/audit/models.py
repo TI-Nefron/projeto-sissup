@@ -40,9 +40,6 @@ class AuditLog(models.Model):
         return f'{self.get_action_display()} em {self.object_repr} por {self.user or "Sistema"}'
 
 def log_change(user, instance, action, changes=None):
-    if not isinstance(instance.pk, uuid.UUID):
-        return
-
     AuditLog.objects.create(
         user=user,
         content_type=ContentType.objects.get_for_model(instance),

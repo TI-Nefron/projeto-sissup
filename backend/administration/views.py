@@ -16,35 +16,36 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from documents.models import DocumentType
+from audit.mixins import AuditableViewSetMixin
 
 User = get_user_model()
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser]
 
-class ClinicViewSet(viewsets.ModelViewSet):
+class ClinicViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = Clinic.objects.all()
     serializer_class = ClinicSerializer
     permission_classes = [permissions.IsAdminUser]
 
-class GuideTypeViewSet(viewsets.ModelViewSet):
+class GuideTypeViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = GuideType.objects.all()
     serializer_class = GuideTypeSerializer
     permission_classes = [permissions.IsAdminUser]
 
-class ProcedureStatusViewSet(viewsets.ModelViewSet):
+class ProcedureStatusViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = ProcedureStatus.objects.all()
     serializer_class = ProcedureStatusSerializer
     permission_classes = [permissions.IsAdminUser]
 
-class ExitTypeViewSet(viewsets.ModelViewSet):
+class ExitTypeViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = ExitType.objects.all()
     serializer_class = ExitTypeSerializer
     permission_classes = [permissions.IsAdminUser]
 
-class RoleViewSet(viewsets.ModelViewSet):
+class RoleViewSet(AuditableViewSetMixin, viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [permissions.IsAdminUser]
