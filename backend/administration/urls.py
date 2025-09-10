@@ -5,7 +5,8 @@ from .views import (
     ClinicViewSet,
     GuideTypeViewSet,
     ProcedureStatusViewSet,
-    ExitTypeViewSet
+    ExitTypeViewSet,
+    RoleViewSet
 )
 
 router = DefaultRouter()
@@ -14,6 +15,7 @@ router.register(r'clinics', ClinicViewSet)
 router.register(r'guide-types', GuideTypeViewSet)
 router.register(r'procedure-statuses', ProcedureStatusViewSet)
 router.register(r'exit-types', ExitTypeViewSet)
+router.register(r'roles', RoleViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

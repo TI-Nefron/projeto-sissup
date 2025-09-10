@@ -68,20 +68,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import apiClient from '@/services/api';
+import { useClinicStore } from '@/stores/clinic';
 
 const patientCount = ref(0);
 const guideCount = ref(0);
+const clinicStore = useClinicStore();
 
 const fetchData = async () => {
+  const clinicId = clinicStore.selectedClinic?.id;
+  if (!clinicId) {
+    // Handle case where no clinic is selected, maybe show a message or set counts to 0
+    patientCount.value = 0;
+    guideCount.value = 0;
+    return;
+  }
+
   try {
-    // Fetch only active patients
-    const patientResponse = await apiClient.get('/api/pacientes/', { params: { is_active: true } });
+    const params = { clinic: clinicId };
+    
+    // Fetch only active patients for the selected clinic
+    const patientResponse = await apiClient.get('/api/pacientes/', { params: { ...params, is_active: true } });
     patientCount.value = patientResponse.data.length;
 
-    // Fetch all guides
-    const guideResponse = await apiClient.get('/api/guias/');
+    // Fetch all guides for the selected clinic
+    const guideResponse = await apiClient.get('/api/guias/', { params });
     guideCount.value = guideResponse.data.length;
 
   } catch (error) {
@@ -89,8 +101,15 @@ const fetchData = async () => {
   }
 };
 
+watch(() => clinicStore.selectedClinic, (newClinic) => {
+  if (newClinic) {
+    fetchData();
+  }
+}, { immediate: true }); // `immediate: true` calls the watcher upon component mount
+
 onMounted(() => {
-  fetchData();
+  // The watcher with `immediate: true` replaces the direct call in onMounted
+  // fetchData();
 });
 </script>
 

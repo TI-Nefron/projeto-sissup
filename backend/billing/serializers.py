@@ -36,10 +36,10 @@ class ProcedureStatusSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug']
 
 class GuideSerializer(serializers.ModelSerializer):
-    patient = PatientNameSerializer(read_only=True)
-    clinic = ClinicNameSerializer(read_only=True)
-    payer = PayerNameSerializer(read_only=True)
-    guide_type = GuideTypeSerializer(read_only=True)
+    patient = serializers.PrimaryKeyRelatedField(queryset=Patient.objects.all())
+    clinic = serializers.PrimaryKeyRelatedField(queryset=Clinic.objects.all(), required=False)
+    payer = serializers.PrimaryKeyRelatedField(queryset=Payer.objects.all())
+    guide_type = serializers.PrimaryKeyRelatedField(queryset=GuideType.objects.all())
     status = ProcedureStatusSerializer(read_only=True)
     documents = DocumentSerializer(many=True, read_only=True)
 

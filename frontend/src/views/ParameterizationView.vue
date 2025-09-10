@@ -18,6 +18,11 @@
             <v-btn color="primary" @click="openUserDialog()">Novo Usuário</v-btn>
           </v-card-title>
           <v-data-table :headers="userHeaders" :items="users" :loading="loading">
+            <template v-slot:item.roles="{ item }">
+              <v-chip v-for="roleId in item.roles" :key="roleId" class="ma-1">
+                {{ roleMap.get(roleId) }}
+              </v-chip>
+            </template>
             <template v-slot:item.actions="{ item }">
               <v-icon class="me-2" size="small" @click="openUserDialog(item)">mdi-pencil</v-icon>
               <v-icon size="small" @click="deleteUser(item.id)">mdi-delete</v-icon>
@@ -26,11 +31,73 @@
         </v-card>
       </v-window-item>
 
-      <!-- Other tabs... -->
-      <v-window-item value="clinics"><!-- ... --></v-window-item>
-      <v-window-item value="guide-types"><!-- ... --></v-window-item>
-      <v-window-item value="procedure-statuses"><!-- ... --></v-window-item>
-      <v-window-item value="exit-types"><!-- ... --></v-window-item>
+      <!-- Clinics Tab -->
+      <v-window-item value="clinics">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-hospital-building"></v-icon> &nbsp; Gerenciar Clínicas
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openClinicDialog()">Nova Clínica</v-btn>
+          </v-card-title>
+          <v-data-table :headers="clinicHeaders" :items="clinics" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openClinicDialog(item)">mdi-pencil</v-icon>
+              <v-icon size="small" @click="deleteClinic(item.id)">mdi-delete</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
+      <!-- Guide Types Tab -->
+      <v-window-item value="guide-types">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-file-document-outline"></v-icon> &nbsp; Gerenciar Tipos de Guia
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openGuideTypeDialog()">Novo Tipo de Guia</v-btn>
+          </v-card-title>
+          <v-data-table :headers="guideTypeHeaders" :items="guideTypes" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openGuideTypeDialog(item)">mdi-pencil</v-icon>
+              <v-icon size="small" @click="deleteGuideType(item.id)">mdi-delete</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
+      <!-- Procedure Statuses Tab -->
+      <v-window-item value="procedure-statuses">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-list-status"></v-icon> &nbsp; Gerenciar Status de Procedimento
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openStatusDialog()">Novo Status</v-btn>
+          </v-card-title>
+          <v-data-table :headers="statusHeaders" :items="statuses" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openStatusDialog(item)">mdi-pencil</v-icon>
+              <v-icon size="small" @click="deleteStatus(item.id)">mdi-delete</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
+      <!-- Exit Types Tab -->
+      <v-window-item value="exit-types">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-location-exit"></v-icon> &nbsp; Gerenciar Tipos de Saída
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openExitTypeDialog()">Novo Tipo de Saída</v-btn>
+          </v-card-title>
+          <v-data-table :headers="exitTypeHeaders" :items="exitTypes" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openExitTypeDialog(item)">mdi-pencil</v-icon>
+              <v-icon size="small" @click="deleteExitType(item.id)">mdi-delete</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
     </v-window>
 
     <!-- User Dialog -->
@@ -46,6 +113,7 @@
               <v-col cols="12"><v-text-field v-model="editedUser.email" label="Email"></v-text-field></v-col>
               <v-col cols="12"><v-text-field v-model="editedUser.password" label="Senha" type="password" placeholder="Deixe em branco para não alterar"></v-text-field></v-col>
               <v-col cols="12"><v-select v-model="editedUser.clinics" :items="clinics" item-title="name" item-value="id" label="Clínicas" multiple chips></v-select></v-col>
+              <v-col cols="12"><v-select v-model="editedUser.roles" :items="roles" item-title="name" item-value="id" label="Cargos" multiple chips></v-select></v-col>
               <v-col cols="12"><v-switch v-model="editedUser.is_superuser" label="Superusuário (acesso total)"></v-switch></v-col>
             </v-row>
           </v-container>
@@ -58,18 +126,102 @@
       </v-card>
     </v-dialog>
 
-    <!-- Other Dialogs... -->
+    <!-- Clinic Dialog -->
+    <v-dialog v-model="clinicDialog" max-width="600px">
+      <v-card>
+        <v-card-title><span class="text-h5">{{ editedClinic.id ? 'Editar Clínica' : 'Nova Clínica' }}</span></v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12"><v-text-field v-model="editedClinic.name" label="Nome"></v-text-field></v-col>
+              <v-col cols="12"><v-text-field v-model="editedClinic.cnpj" label="CNPJ"></v-text-field></v-col>
+              <v-col cols="12"><v-switch v-model="editedClinic.is_active" label="Ativa"></v-switch></v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="closeClinicDialog">Cancelar</v-btn>
+          <v-btn color="primary" @click="saveClinic">Salvar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Guide Type Dialog -->
+    <v-dialog v-model="guideTypeDialog" max-width="600px">
+      <v-card>
+        <v-card-title><span class="text-h5">{{ editedGuideType.id ? 'Editar Tipo de Guia' : 'Novo Tipo de Guia' }}</span></v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12"><v-text-field v-model="editedGuideType.name" label="Nome"></v-text-field></v-col>
+              <v-col cols="12"><v-switch v-model="editedGuideType.is_active" label="Ativo"></v-switch></v-col>
+              <v-col cols="12"><v-select v-model="editedGuideType.clinics" :items="clinics" item-title="name" item-value="id" label="Clínicas" multiple chips></v-select></v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="closeGuideTypeDialog">Cancelar</v-btn>
+          <v-btn color="primary" @click="saveGuideType">Salvar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Procedure Status Dialog -->
+    <v-dialog v-model="statusDialog" max-width="600px">
+      <v-card>
+        <v-card-title><span class="text-h5">{{ editedStatus.id ? 'Editar Status' : 'Novo Status' }}</span></v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12"><v-text-field v-model="editedStatus.name" label="Nome"></v-text-field></v-col>
+              <v-col cols="12"><v-text-field v-model="editedStatus.slug" label="Slug"></v-text-field></v-col>
+              <v-col cols="12"><v-switch v-model="editedStatus.is_active" label="Ativo"></v-switch></v-col>
+              <v-col cols="12"><v-select v-model="editedStatus.clinics" :items="clinics" item-title="name" item-value="id" label="Clínicas" multiple chips></v-select></v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="closeStatusDialog">Cancelar</v-btn>
+          <v-btn color="primary" @click="saveStatus">Salvar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Exit Type Dialog -->
+    <v-dialog v-model="exitTypeDialog" max-width="600px">
+      <v-card>
+        <v-card-title><span class="text-h5">{{ editedExitType.id ? 'Editar Tipo de Saída' : 'Novo Tipo de Saída' }}</span></v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12"><v-text-field v-model="editedExitType.name" label="Nome"></v-text-field></v-col>
+              <v-col cols="12"><v-text-field v-model="editedExitType.code" label="Código"></v-text-field></v-col>
+              <v-col cols="12"><v-select v-model="editedExitType.clinics" :items="clinics" item-title="name" item-value="id" label="Clínicas" multiple chips></v-select></v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="closeExitTypeDialog">Cancelar</v-btn>
+          <v-btn color="primary" @click="saveExitType">Salvar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import * as adminApi from '@/services/administrationApi';
 import type { Clinic } from '@/stores/clinic';
-import type { GuideType, ProcedureStatus, ExitType, User } from '@/services/administrationApi';
+import type { GuideType, ProcedureStatus, ExitType, User, Role } from '@/services/administrationApi';
 
 const tab = ref('users');
 const loading = ref(false);
+const roles = ref<Role[]>([]);
 
 // --- General --- 
 onMounted(() => {
@@ -78,17 +230,34 @@ onMounted(() => {
   fetchGuideTypes();
   fetchStatuses();
   fetchExitTypes();
+  fetchRoles();
 });
+
+async function fetchRoles() {
+  try {
+    const response = await adminApi.getRoles();
+    roles.value = response.data;
+    console.log('Roles:', response.data);
+  } catch (e) {
+    console.error(e);
+  }
+}
 
 // --- Users --- 
 const users = ref<User[]>([]);
 const userDialog = ref(false);
 const editedUser = ref<Partial<User>>({});
+const roleMap = computed(() => {
+  const map = new Map<string, string>();
+  roles.value.forEach(role => map.set(role.id, role.name));
+  return map;
+});
 const userHeaders = [
   { title: 'Usuário', key: 'username' },
   { title: 'Nome', key: 'first_name' },
   { title: 'Sobrenome', key: 'last_name' },
   { title: 'Email', key: 'email' },
+  { title: 'Cargos', key: 'roles' },
   { title: 'Superusuário', key: 'is_superuser' },
   { title: 'Ações', key: 'actions', sortable: false },
 ];
@@ -145,10 +314,10 @@ const clinicHeaders = [{ title: 'Nome', key: 'name' }, { title: 'CNPJ', key: 'cn
 const guideTypeHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
 const statusHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Slug', key: 'slug' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
 const exitTypeHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Código', key: 'code' }, { title: 'Ações', key: 'actions', sortable: false }];
-async function fetchClinics() { try { clinics.value = (await adminApi.getClinics()).data; } catch (e) { console.error(e); } }
-async function fetchGuideTypes() { try { guideTypes.value = (await adminApi.getGuideTypes()).data; } catch (e) { console.error(e); } }
-async function fetchStatuses() { try { statuses.value = (await adminApi.getProcedureStatuses()).data; } catch (e) { console.error(e); } }
-async function fetchExitTypes() { try { exitTypes.value = (await adminApi.getExitTypes()).data; } catch (e) { console.error(e); } }
+async function fetchClinics() { try { const response = await adminApi.getClinics(); clinics.value = response.data; console.log('Clinics:', response.data); } catch (e) { console.error(e); } }
+async function fetchGuideTypes() { try { const response = await adminApi.getGuideTypes(); guideTypes.value = response.data; console.log('Guide Types:', response.data); } catch (e) { console.error(e); } }
+async function fetchStatuses() { try { const response = await adminApi.getProcedureStatuses(); statuses.value = response.data; console.log('Statuses:', response.data); } catch (e) { console.error(e); } }
+async function fetchExitTypes() { try { const response = await adminApi.getExitTypes(); exitTypes.value = response.data; console.log('Exit Types:', response.data); } catch (e) { console.error(e); } }
 function openClinicDialog(item: any) { editedClinic.value = item ? { ...item } : { name: '', cnpj: '', is_active: true }; clinicDialog.value = true; }
 function closeClinicDialog() { clinicDialog.value = false; }
 async function saveClinic() { const d = editedClinic.value; if (d.id) await adminApi.updateClinic(d.id, d); else await adminApi.createClinic(d as any); closeClinicDialog(); await fetchClinics(); }

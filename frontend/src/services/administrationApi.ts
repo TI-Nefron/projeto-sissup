@@ -23,6 +23,11 @@ export interface ExitType {
   clinics: string[];
 }
 
+export interface Role {
+  id: string;
+  name: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -31,8 +36,12 @@ export interface User {
   email: string;
   is_superuser: boolean;
   clinics: string[];
+  roles: string[];
   password?: string;
 }
+
+// Role API
+export const getRoles = () => apiClient.get<Role[]>('/api/administration/roles/');
 
 
 // Clinic API

@@ -3,12 +3,14 @@ from django.contrib.auth import get_user_model
 from organization.models import Clinic
 from parameters.models import GuideType, ProcedureStatus
 from dialysis.models import ExitType
+from accounts.models import Role
 from .serializers import (
     UserSerializer,
     ClinicSerializer,
     GuideTypeSerializer,
     ProcedureStatusSerializer,
-    ExitTypeSerializer
+    ExitTypeSerializer,
+    RoleSerializer
 )
 
 User = get_user_model()
@@ -36,4 +38,9 @@ class ProcedureStatusViewSet(viewsets.ModelViewSet):
 class ExitTypeViewSet(viewsets.ModelViewSet):
     queryset = ExitType.objects.all()
     serializer_class = ExitTypeSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class RoleViewSet(viewsets.ModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
     permission_classes = [permissions.IsAdminUser]
