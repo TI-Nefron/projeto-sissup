@@ -285,6 +285,25 @@ const getStatusColor = (status: string) => {
   return 'primary'; // Default color
 };
 
+watch(() => filters.value.patient__full_name__icontains, (newValue, oldValue) => {
+  if (newValue) {
+    // Remove accents
+    let formatted = newValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // Prevent multiple spaces
+    formatted = formatted.replace(/\s{2,}/g, ' ');
+
+    // Capitalize first letter of each word
+    formatted = formatted.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+
+    if (formatted !== newValue) {
+      filters.value.patient__full_name__icontains = formatted;
+    }
+  }
+});
+
 watch(filters, () => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {

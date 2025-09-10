@@ -24,11 +24,17 @@
       :items="patients"
       class="elevation-1"
     >
+      <template #[`item.cpf`]='{ value }'>
+        {{ formatCPF(value) }}
+      </template>
+      <template #[`item.cns`]='{ value }'>
+        {{ formatCNS(value) }}
+      </template>
       <template #[`item.status`]='{ value }'>
-        <v-chip :color="getStatusColor(value)" :text="value" size="small"></v-chip>
+        <v-chip :color="getStatusColor(value)" :text="translateStatus(value)" size="small"></v-chip>
       </template>
       <template #[`item.patient_type`]='{ value }'>
-        <v-chip :color="getPatientTypeColor(value)" :text="value" size="small"></v-chip>
+        <v-chip :color="getPatientTypeColor(value)" :text="translatePatientType(value)" size="small"></v-chip>
       </template>
       <template #[`item.actions`]="{ item }">
         <v-btn icon :to="`/patients/${item.id}/edit`" variant="text" size="small">
@@ -170,6 +176,36 @@ const getStatusColor = (status: string) => {
 
 const getPatientTypeColor = (type: string) => {
   return type === 'CHRONIC' ? 'purple' : 'teal';
+};
+
+const translateStatus = (status: string) => {
+  const translations: { [key: string]: string } = {
+    IN_TREATMENT: 'Em Tratamento',
+    DISCHARGED: 'Alta',
+    DECEASED: 'Óbito',
+    TRANSFERRED: 'Transferido',
+  };
+  return translations[status] || status;
+};
+
+const translatePatientType = (type: string) => {
+  const translations: { [key: string]: string } = {
+    CHRONIC: 'Crônico',
+    ACUTE: 'Agudo',
+  };
+  return translations[type] || type;
+};
+
+const formatCPF = (cpf: string) => {
+  if (!cpf) return '';
+  const cleaned = cpf.replace(/\D/g, '');
+  return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
+const formatCNS = (cns: string) => {
+  if (!cns) return '';
+  const cleaned = cns.replace(/\D/g, '');
+  return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{3})(\d{3})/, '$1.$2.$3.$4.$5');
 };
 
 onMounted(fetchPatients);

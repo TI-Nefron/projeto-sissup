@@ -40,6 +40,9 @@
             <v-btn color="primary" @click="openClinicDialog()">Nova Clínica</v-btn>
           </v-card-title>
           <v-data-table :headers="clinicHeaders" :items="clinics" :loading="loading">
+            <template v-slot:item.cnpj="{ value }">
+              {{ formatCNPJ(value) }}
+            </template>
             <template v-slot:item.actions="{ item }">
               <v-icon class="me-2" size="small" @click="openClinicDialog(item)">mdi-pencil</v-icon>
               <v-icon size="small" @click="deleteClinic(item.id)">mdi-delete</v-icon>
@@ -134,7 +137,7 @@
           <v-container>
             <v-row>
               <v-col cols="12"><v-text-field v-model="editedClinic.name" label="Nome"></v-text-field></v-col>
-              <v-col cols="12"><v-text-field v-model="editedClinic.cnpj" label="CNPJ"></v-text-field></v-col>
+              <v-col cols="12"><v-text-field v-model="editedClinic.cnpj" label="CNPJ" maxlength="18" :rules="[cnpjRule]"></v-text-field></v-col>
               <v-col cols="12"><v-switch v-model="editedClinic.is_active" label="Ativa"></v-switch></v-col>
             </v-row>
           </v-container>
@@ -214,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import * as adminApi from '@/services/administrationApi';
 import type { Clinic } from '@/stores/clinic';
 import type { GuideType, ProcedureStatus, ExitType, User, Role } from '@/services/administrationApi';
@@ -310,6 +313,87 @@ const editedClinic = ref<Partial<Clinic>>({});
 const editedGuideType = ref<Partial<GuideType>>({});
 const editedStatus = ref<Partial<ProcedureStatus>>({});
 const editedExitType = ref<Partial<ExitType>>({});
+
+watch(() => editedClinic.value.name, (newValue, oldValue) => {
+  if (newValue) {
+    // Remove accents
+    let formatted = newValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // Prevent multiple spaces
+    formatted = formatted.replace(/\s{2,}/g, ' ');
+
+    // Capitalize first letter of each word
+    formatted = formatted.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+
+    if (formatted !== newValue) {
+      editedClinic.value.name = formatted;
+    }
+  }
+});
+
+const cnpjRule = (v: string) => {
+    if (!v) return true; // CNPJ is optional
+    const cleaned = v.replace(/\D/g, '');
+    if (cleaned.length !== 14 || /^(\d)\1{13}$/.test(cleaned)) {
+        return 'CNPJ inválido';
+    }
+    let length = cleaned.length - 2;
+    let numbers = cleaned.substring(0, length);
+    const digits = cleaned.substring(length);
+    let sum = 0;
+    let pos = length - 7;
+    for (let i = length; i >= 1; i--) {
+        sum += parseInt(numbers.charAt(length - i)) * pos--;
+        if (pos < 2) pos = 9;
+    }
+    let result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+    if (result !== parseInt(digits.charAt(0))) {
+        return 'CNPJ inválido';
+    }
+    length = length + 1;
+    numbers = cleaned.substring(0, length);
+    sum = 0;
+    pos = length - 7;
+    for (let i = length; i >= 1; i--) {
+        sum += parseInt(numbers.charAt(length - i)) * pos--;
+        if (pos < 2) pos = 9;
+    }
+    result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+    if (result !== parseInt(digits.charAt(1))) {
+        return 'CNPJ inválido';
+    }
+    return true;
+};
+
+watch(() => editedClinic.value.cnpj, (newValue, oldValue) => {
+  if (newValue) {
+    const cleaned = newValue.replace(/\D/g, '');
+    let formatted = cleaned;
+    if (cleaned.length > 2) {
+      formatted = `${cleaned.slice(0, 2)}.${cleaned.slice(2)}`;
+    }
+    if (cleaned.length > 5) {
+      formatted = `${formatted.slice(0, 6)}.${cleaned.slice(5)}`;
+    }
+    if (cleaned.length > 8) {
+      formatted = `${formatted.slice(0, 10)}/${cleaned.slice(8)}`;
+    }
+    if (cleaned.length > 12) {
+      formatted = `${formatted.slice(0, 15)}-${cleaned.slice(12)}`;
+    }
+    if (formatted !== newValue) {
+        editedClinic.value.cnpj = formatted.slice(0, 18);
+    }
+  }
+});
+
+const formatCNPJ = (cnpj: string) => {
+  if (!cnpj) return '';
+  const cleaned = cnpj.replace(/\D/g, '');
+  return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+};
 const clinicHeaders = [{ title: 'Nome', key: 'name' }, { title: 'CNPJ', key: 'cnpj' }, { title: 'Ativa', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
 const guideTypeHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
 const statusHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Slug', key: 'slug' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
@@ -320,7 +404,16 @@ async function fetchStatuses() { try { const response = await adminApi.getProced
 async function fetchExitTypes() { try { const response = await adminApi.getExitTypes(); exitTypes.value = response.data; console.log('Exit Types:', response.data); } catch (e) { console.error(e); } }
 function openClinicDialog(item: any) { editedClinic.value = item ? { ...item } : { name: '', cnpj: '', is_active: true }; clinicDialog.value = true; }
 function closeClinicDialog() { clinicDialog.value = false; }
-async function saveClinic() { const d = editedClinic.value; if (d.id) await adminApi.updateClinic(d.id, d); else await adminApi.createClinic(d as any); closeClinicDialog(); await fetchClinics(); }
+async function saveClinic() { 
+  const dataToSave = { ...editedClinic.value };
+  if (dataToSave.cnpj) {
+    dataToSave.cnpj = dataToSave.cnpj.replace(/\D/g, '');
+  }
+  if (dataToSave.id) await adminApi.updateClinic(dataToSave.id, dataToSave); 
+  else await adminApi.createClinic(dataToSave as any); 
+  closeClinicDialog(); 
+  await fetchClinics(); 
+}
 async function deleteClinic(id: string) { if (!confirm('Tem certeza?')) return; await adminApi.deleteClinic(id); await fetchClinics(); }
 function openGuideTypeDialog(item: any) { editedGuideType.value = item ? { ...item } : { name: '', is_active: true, clinics: [] }; guideTypeDialog.value = true; }
 function closeGuideTypeDialog() { guideTypeDialog.value = false; }

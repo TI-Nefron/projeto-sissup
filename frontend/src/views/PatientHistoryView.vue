@@ -13,7 +13,9 @@
       :loading="loading"
       class="elevation-1 mt-4"
     >
-      <!-- Add custom slots for formatting if needed -->
+      <template #[`item.record_type`]='{ value }'>
+        {{ translateRecordType(value) }}
+      </template>
     </v-data-table>
 
     <PatientHistoryForm v-model="dialog" @save="onSave" />
@@ -82,6 +84,14 @@ const openForm = () => {
 const onSave = () => {
   dialog.value = false;
   fetchHistory(); // Refresh list after save
+};
+
+const translateRecordType = (type: string) => {
+  const translations: { [key: string]: string } = {
+    ENTRADA: 'Entrada',
+    SAIDA: 'Saída',
+  };
+  return translations[type] || type;
 };
 
 </script>

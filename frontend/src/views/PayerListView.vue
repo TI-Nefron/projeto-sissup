@@ -35,6 +35,8 @@
                         <v-select
                           v-model="editedItem.payer_type"
                           :items="payerTypes"
+                          item-title="title"
+                          item-value="value"
                           label="Tipo"
                           :rules="[requiredRule]"
                           required
@@ -89,6 +91,9 @@
           </v-dialog>
         </v-toolbar>
       </template>
+      <template #[`item.payer_type`]='{ value }'>
+        {{ translatePayerType(value) }}
+      </template>
       <template #[`item.actions`]='{ item }'>
         <v-icon size="small" class="me-2" @click="editItem(item)">mdi-pencil</v-icon>
         <v-icon size="small" @click="deleteItem(item)">mdi-delete</v-icon>
@@ -132,7 +137,10 @@ const dialog = ref(false);
 const dialogDelete = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }>; resetValidation: () => void; } | null>(null);
 const valid = ref(true);
-const payerTypes = ref(['SUS', 'PRIVATE']);
+const payerTypes = ref([
+  { title: 'Privado', value: 'PRIVATE' },
+  { title: 'SUS', value: 'SUS' },
+]);
 const clinics = ref<Clinic[]>([]);
 
 // Snackbar state
@@ -264,5 +272,10 @@ const deleteItemConfirm = async () => {
   } finally {
     closeDelete();
   }
+};
+
+const translatePayerType = (type: string) => {
+  const found = payerTypes.value.find(p => p.value === type);
+  return found ? found.title : type;
 };
 </script>
