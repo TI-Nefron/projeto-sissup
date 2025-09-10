@@ -23,7 +23,7 @@ class PayerNameSerializer(serializers.ModelSerializer):
 class PayerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payer
-        fields = '__all__'
+        fields = ['id', 'name', 'payer_type', 'is_active', 'clinics']
 
 class GuideTypeSerializer(serializers.ModelSerializer):
     class Meta:

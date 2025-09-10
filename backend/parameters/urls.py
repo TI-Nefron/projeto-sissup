@@ -10,4 +10,6 @@ router.register(r'procedure-statuses', views.ProcedureStatusViewSet, basename='p
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('clinics/<uuid:clinic_id>/guide-types/', views.ClinicGuideTypeListView.as_view(), name='clinic-guide-types'),
+    path('clinics/<uuid:clinic_id>/procedure-statuses/', views.ClinicProcedureStatusListView.as_view(), name='clinic-procedure-statuses'),
 ]

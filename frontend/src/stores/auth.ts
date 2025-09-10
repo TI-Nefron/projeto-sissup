@@ -3,12 +3,16 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiClient from '@/services/api';
 import { useUserStore } from './user';
+import { useClinicStore } from './clinic';
 
 export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false);
   const userStore = useUserStore();
+  const clinicStore = useClinicStore();
 
-  const login = async (credentials: any) => {
+  const user = computed(() => userStore.user);
+
+  const login = async (credentials: URLSearchParams) => {
     try {
       const response = await apiClient.post('/api-auth/login/', credentials, {
           headers: {
@@ -17,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
       });
       // A successful login does not have non_field_errors.
       if (response.data && response.data.non_field_errors) {
-        throw new Error('Login failed due to credentials.');
+        throw new Error('Login falhou devido a credenciais inválidas.');
       }
       isAuthenticated.value = true;
       await userStore.fetchUser();
@@ -32,6 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
     await apiClient.post('/api-auth/logout/');
     isAuthenticated.value = false;
     userStore.clearUser();
+    clinicStore.clearClinic();
   };
 
   const checkAuth = async () => {
@@ -41,11 +46,12 @@ export const useAuthStore = defineStore('auth', () => {
         await userStore.fetchUser();
       }
       isAuthenticated.value = !!userStore.user;
-    } catch (error) {
+    } catch (e) {
       isAuthenticated.value = false;
       userStore.clearUser();
+      console.error('Falha ao verificar autenticação', e);
     }
   };
 
-  return { isAuthenticated, login, logout, checkAuth };
+  return { isAuthenticated, user, login, logout, checkAuth };
 });

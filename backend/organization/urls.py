@@ -9,4 +9,5 @@ router.register(r'clinics', views.ClinicViewSet, basename='clinic')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('parameterization/', views.ParameterizationView.as_view(), name='parameterization'),
 ]

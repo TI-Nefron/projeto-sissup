@@ -1,4 +1,3 @@
-
 <template>
   <v-container class="fill-height" fluid>
     <v-row align="center" justify="center">
@@ -58,13 +57,12 @@ const handleLogin = async () => {
 
     await authStore.login(params);
 
-    // After successful login, the navigation guard will automatically redirect
-    // to '/patients' if the user is still on '/login'.
-    await router.push('/lobby');
+    // The navigation guard will redirect to clinic selection or lobby
+    await router.push('/clinic-selection');
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     error.value = 'Usuário ou senha inválidos.';
-    console.error('Login error:', err);
+    console.error('Erro de login:', err);
   }
 };
 </script>

@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, watch, defineEmits } from 'vue';
+import { ref, defineProps, watch, defineEmits, defineExpose } from 'vue';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -41,6 +41,8 @@ watch(dialog, (val) => {
     emit('update:modelValue', false);
   }
 });
+
+defineExpose({ dialog });
 </script>
 
 <style scoped>

@@ -3,6 +3,20 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from organization.models import Clinic
 
+class ExitType(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    clinics = models.ManyToManyField(
+        Clinic,
+        verbose_name=_("Clínicas"),
+        related_name="exit_types",
+        blank=True
+    )
+
+    def __str__(self):
+        return self.name
+
 class Patient(models.Model):
     """
     Represents a patient undergoing renal therapy, associated with a specific clinic
@@ -101,3 +115,26 @@ class Patient(models.Model):
             self.is_active = True
             
         super().save(*args, **kwargs)
+
+class PatientHistory(models.Model):
+    class RecordType(models.TextChoices):
+        ENTRADA = 'ENTRADA', _('Entrada')
+        SAIDA = 'SAIDA', _('Saída')
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='history_records')
+    record_type = models.CharField(max_length=10, choices=RecordType.choices)
+    record_date = models.DateField()
+    clinic = models.ForeignKey(Clinic, on_delete=models.PROTECT)
+    exit_type = models.ForeignKey(ExitType, on_delete=models.PROTECT, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Histórico do Paciente")
+        verbose_name_plural = _("Históricos dos Pacientes")
+        ordering = ['-record_date', '-created_at']
+
+    def __str__(self):
+        return f"{self.get_record_type_display()} de {self.patient.full_name} em {self.record_date}"

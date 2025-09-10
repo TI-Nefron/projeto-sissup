@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from billing.models import Guide
+from organization.models import Clinic
 
 class GuideType(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -12,6 +13,12 @@ class GuideType(models.Model):
         unique=True
     )
     is_active = models.BooleanField(_("Ativo"), default=True)
+    clinics = models.ManyToManyField(
+        Clinic,
+        verbose_name=_("Clínicas"),
+        related_name="guide_types",
+        blank=True
+    )
 
     class Meta:
         verbose_name = _("Tipo de Guia")
@@ -35,6 +42,12 @@ class ProcedureStatus(models.Model):
         help_text=_("Identificador único para uso interno no código (ex: DRAFT, APPROVED). Não altere após a criação.")
     )
     is_active = models.BooleanField(_("Ativo"), default=True)
+    clinics = models.ManyToManyField(
+        Clinic,
+        verbose_name=_("Clínicas"),
+        related_name="procedure_statuses",
+        blank=True
+    )
 
     class Meta:
         verbose_name = _("Status de Procedimento")
