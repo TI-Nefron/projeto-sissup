@@ -5,7 +5,7 @@ import PatientFormView from '../views/PatientFormView.vue';
 import GuideFormView from '../views/GuideFormView.vue';
 import LoginView from '../views/LoginView.vue';
 import LobbyView from '../views/LobbyView.vue';
-import PayerListView from '../views/PayerListView.vue';
+
 import PatientHistoryView from '../views/PatientHistoryView.vue';
 import ClinicSelectionView from '../views/ClinicSelectionView.vue';
 import ParameterizationView from '../views/ParameterizationView.vue';
@@ -73,12 +73,7 @@ const router = createRouter({
       component: GuideFormView,
       meta: { requiresAuth: true },
     },
-    {
-      path: '/payers',
-      name: 'payers',
-      component: PayerListView,
-      meta: { requiresAuth: true },
-    },
+    
     {
       path: '/history',
       name: 'history',

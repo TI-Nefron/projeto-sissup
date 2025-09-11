@@ -40,6 +40,14 @@ export interface User {
   password?: string;
 }
 
+export interface Payer {
+  id: string;
+  name: string;
+  payer_type: 'SUS' | 'PRIVATE';
+  is_active: boolean;
+  clinics: string[];
+}
+
 // Role API
 export const getRoles = () => apiClient.get<Role[]>('/api/administration/roles/');
 
@@ -49,6 +57,12 @@ export const getClinics = () => apiClient.get<Clinic[]>('/api/administration/cli
 export const createClinic = (data: Omit<Clinic, 'id'>) => apiClient.post<Clinic>('/api/administration/clinics/', data);
 export const updateClinic = (id: string, data: Partial<Clinic>) => apiClient.put<Clinic>(`/api/administration/clinics/${id}/`, data);
 export const deleteClinic = (id: string) => apiClient.delete(`/api/administration/clinics/${id}/`);
+
+// Payer API
+export const getPayers = () => apiClient.get<Payer[]>('/api/billing/payers/');
+export const createPayer = (data: Partial<Payer>) => apiClient.post<Payer>('/api/billing/payers/', data);
+export const updatePayer = (id: string, data: Partial<Payer>) => apiClient.put<Payer>(`/api/billing/payers/${id}/`, data);
+export const deletePayer = (id: string) => apiClient.delete(`/api/billing/payers/${id}/`);
 
 // GuideType API
 export const getGuideTypes = () => apiClient.get<GuideType[]>('/api/administration/guide-types/');

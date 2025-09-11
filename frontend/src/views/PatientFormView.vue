@@ -52,13 +52,79 @@
           </v-card-text>
         </v-card>
 
-        <!-- Documents Card -->
+        <!-- Existing Documents Card -->
+        <v-card v-if="!isNewPatient && patientDocuments.length > 0" class="mb-6">
+          <v-card-title>Documentos Anexados</v-card-title>
+          <v-list lines="one">
+            <v-list-item
+              v-for="doc in patientDocuments"
+              :key="doc.id"
+              :title="doc.type.name.startsWith('Outro') ? doc.description : doc.type.name"
+              :subtitle="`Adicionado em: ${new Date(doc.created_at).toLocaleDateString()}`"
+            >
+              <template v-slot:append>
+                <v-btn icon @click="openPreview(doc)" variant="text" size="small">
+                  <v-icon>mdi-eye-outline</v-icon>
+                </v-btn>
+                <v-btn icon :href="doc.file_url.replace('http://minio:9000', 'http://localhost:9090')" target="_blank" variant="text" size="small">
+                  <v-icon>mdi-download-outline</v-icon>
+                </v-btn>
+                <v-btn icon @click="deleteDocument(doc.id)" variant="text" size="small">
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-card>
+
+        <!-- Mandatory Documents Upload -->
         <v-card class="mb-6">
+          <v-card-title>Documentos Obrigatórios</v-card-title>
           <v-card-text>
-            <MultiDocumentUpload 
-              category="PATIENT" 
-              @update:documents="updateDocuments"
-            />
+            <v-row v-for="(doc, index) in mandatoryDocs" :key="doc.type.id">
+              <v-col cols="12" md="6">
+                <v-label>{{ doc.type.name }}</v-label>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-file-input
+                  v-model="mandatoryDocs[index].file"
+                  label="Arquivo"
+                  density="compact"
+                ></v-file-input>
+              </v-col>
+            </v-row>
+            <v-alert v-if="mandatoryDocs.length === 0" type="info" text="Nenhum documento obrigatório para esta clínica."></v-alert>
+          </v-card-text>
+        </v-card>
+
+        <!-- Extra Documents Upload -->
+        <v-card class="mb-6">
+          <v-card-title>Documentos Extras</v-card-title>
+          <v-card-text>
+            <v-row v-for="(doc, index) in extraDocs" :key="index" class="mb-2">
+              <v-col cols="12" md="5">
+                <v-text-field
+                  v-model="doc.description"
+                  label="Descrição do Documento"
+                  density="compact"
+                  hide-details
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-file-input
+                  v-model="doc.file"
+                  label="Arquivo"
+                  density="compact"
+                  hide-details
+                ></v-file-input>
+              </v-col>
+              <v-col cols="12" md="1">
+                <v-btn icon @click="removeExtraDoc(index)" size="small">
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </v-col>
+            </v-row>
+            <v-btn @click="addExtraDoc" color="primary" class="mt-2">Adicionar Documento Extra</v-btn>
           </v-card-text>
         </v-card>
 
@@ -80,6 +146,20 @@
       content-type-model="patient"
     />
 
+    <v-dialog v-model="previewDialog" fullscreen>
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="previewDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          <v-toolbar-title>{{ selectedDocForPreview?.type.name }}</v-toolbar-title>
+        </v-toolbar>
+        <v-card-text class="pa-0" style="height: calc(100vh - 64px);">
+          <embed v-if="selectedDocForPreview" :src="selectedDocForPreview.file_url.replace('http://minio:9000', 'http://localhost:9090')" type="application/pdf" width="100%" height="100%" />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
   </div>
 </template>
 
@@ -88,11 +168,23 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import apiClient from '@/services/api';
 import { useClinicStore } from '@/stores/clinic';
-import MultiDocumentUpload from '@/components/MultiDocumentUpload.vue';
+import * as adminApi from '@/services/administrationApi';
 import ObjectHistory from '@/components/ObjectHistory.vue';
 
-interface DocumentData {
-  type: string | null;
+// Interfaces
+interface DocumentType { id: string; name: string; }
+interface Document {
+  id: string;
+  type: DocumentType;
+  description?: string;
+  file_url: string;
+  created_at: string;
+}
+interface UploadableDoc {
+  type: DocumentType;
+  file: File[] | null;
+}
+interface ExtraDoc {
   description: string;
   file: File[] | null;
 }
@@ -103,7 +195,7 @@ const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const apiErrors = ref<Record<string, any>>({});
 const showHistory = ref(false);
 
-const patient = ref({
+const patient = ref<any>({
   id: '',
   full_name: '',
   cpf: '',
@@ -114,7 +206,14 @@ const patient = ref({
 });
 
 const clinics = ref<{id: string, name: string}[]>([]);
-const documentsToUpload = ref<DocumentData[]>([]);
+const patientDocuments = ref<Document[]>([]);
+const mandatoryDocs = ref<UploadableDoc[]>([]);
+const extraDocs = ref<ExtraDoc[]>([]);
+const outroDocumentTypeId = ref<string | null>(null);
+
+// Document Preview State
+const previewDialog = ref(false);
+const selectedDocForPreview = ref<Document | null>(null);
 
 const patientTypes = ref([
     { title: 'Crônico', value: 'CHRONIC' },
@@ -130,10 +229,6 @@ const patientStatuses = ref([
 const formTitle = computed(() => route.params.id ? 'Editar Paciente' : 'Novo Paciente');
 const isNewPatient = computed(() => !route.params.id);
 
-const updateDocuments = (docs: DocumentData[]) => {
-  documentsToUpload.value = docs;
-};
-
 // ... (CPF and CNS rules remain the same) ...
 const cpfRule = (v: string) => { return true; };
 const cnsRule = (v: string) => { return true; };
@@ -142,6 +237,50 @@ const cnsRule = (v: string) => { return true; };
 watch(() => patient.value.cpf, (newValue) => { /* ... */ });
 watch(() => patient.value.cns, (newValue) => { /* ... */ });
 watch(() => patient.value.full_name, (newValue) => { /* ... */ });
+
+const fetchMandatoryDocs = async (clinicId: string) => {
+  try {
+    const mandatoryDocIds = (await adminApi.getMandatoryDocuments(clinicId)).data;
+    const allDocTypes = (await apiClient.get<DocumentType[]>('/api/document-types/', { params: { category: 'PATIENT' } })).data;
+    
+    mandatoryDocs.value = allDocTypes
+      .filter(type => mandatoryDocIds.includes(type.id))
+      .map(type => ({ type, file: null }));
+
+    const outroDoc = allDocTypes.find(type => type.name.toLowerCase() === 'outro');
+    if (outroDoc) {
+      outroDocumentTypeId.value = outroDoc.id;
+    }
+
+  } catch (error) {
+    console.error('Erro ao buscar documentos obrigatórios:', error);
+  }
+};
+
+const addExtraDoc = () => {
+  extraDocs.value.push({ description: '', file: null });
+};
+
+const removeExtraDoc = (index: number) => {
+  extraDocs.value.splice(index, 1);
+};
+
+const openPreview = (doc: Document) => {
+  selectedDocForPreview.value = doc;
+  previewDialog.value = true;
+};
+
+const deleteDocument = async (docId: string) => {
+  if (confirm('Tem certeza que deseja excluir este documento?')) {
+    try {
+      await apiClient.delete(`/api/documents/${docId}/`);
+      patientDocuments.value = patientDocuments.value.filter(d => d.id !== docId);
+    } catch (error) {
+      console.error('Erro ao excluir documento:', error);
+      // You might want to show a snackbar or alert to the user here
+    }
+  }
+};
 
 onMounted(async () => {
   try {
@@ -154,11 +293,11 @@ onMounted(async () => {
   if (route.params.id) {
     try {
       const response = await apiClient.get(`/api/pacientes/${route.params.id}/`);
-      const patientData = response.data;
       patient.value = {
-          ...patientData,
-          clinic_id: patientData.clinic.id
+          ...response.data,
+          clinic_id: response.data.clinic.id
       }
+      patientDocuments.value = response.data.documents || [];
     } catch (error) {
       console.error('Erro ao buscar paciente:', error);
     }
@@ -166,6 +305,7 @@ onMounted(async () => {
     const clinicStore = useClinicStore();
     if (clinicStore.selectedClinic) {
       patient.value.clinic_id = clinicStore.selectedClinic.id;
+      await fetchMandatoryDocs(clinicStore.selectedClinic.id);
     } else {
       console.error('DEBUG: No clinic selected in store.');
     }
@@ -184,34 +324,40 @@ const savePatient = async () => {
   
   // Append patient data
   Object.entries(patient.value).forEach(([key, value]) => {
-    if (value !== null) {
+    if (value !== null && key !== 'documents') { // Don't append existing documents
       formData.append(key, value as string);
     }
   });
 
-  // Append documents
-  documentsToUpload.value.forEach((doc, index) => {
-    if (doc.file && doc.file.length > 0 && doc.type) {
-      formData.append(`documents_data[${index}]file`, doc.file[0]);
-      formData.append(`documents_data[${index}]type`, doc.type);
-      if (doc.description) {
-        formData.append(`documents_data[${index}]description`, doc.description);
-      }
+  let docIndex = 0;
+
+  // Append mandatory documents
+  mandatoryDocs.value.forEach(doc => {
+    if (doc.file && doc.file.length > 0) {
+      formData.append(`documents_data[${docIndex}]file`, doc.file[0]);
+      formData.append(`documents_data[${docIndex}]type`, doc.type.id);
+      docIndex++;
+    }
+  });
+
+  // Append extra documents
+  extraDocs.value.forEach(doc => {
+    if (doc.file && doc.file.length > 0 && doc.description && outroDocumentTypeId.value) {
+      formData.append(`documents_data[${docIndex}]file`, doc.file[0]);
+      formData.append(`documents_data[${docIndex}]type`, outroDocumentTypeId.value);
+      formData.append(`documents_data[${docIndex}]description`, doc.description);
+      docIndex++;
     }
   });
 
   try {
     if (isNewPatient.value) {
       await apiClient.post('/api/pacientes/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
     } else {
       await apiClient.put(`/api/pacientes/${route.params.id}/`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
     }
     router.push('/patients');

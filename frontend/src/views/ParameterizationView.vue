@@ -3,6 +3,7 @@
     <v-tabs v-model="tab" grow>
       <v-tab value="users">Usuários</v-tab>
       <v-tab value="clinics">Clínicas</v-tab>
+      <v-tab value="payers">Convênios</v-tab>
       <v-tab value="document-types">Tipos de Documento</v-tab>
       <v-tab value="mandatory-docs">Documentos Obrigatórios</v-tab>
       <v-tab value="guide-types">Tipos de Guia</v-tab>
@@ -27,7 +28,8 @@
             </template>
             <template v-slot:item.actions="{ item }">
               <v-icon class="me-2" size="small" @click="openUserDialog(item)">mdi-pencil</v-icon>
-              <v-icon size="small" @click="deleteUser(item.id)">mdi-delete</v-icon>
+              <v-icon class="me-2" size="small" @click="deleteUser(item.id)">mdi-delete</v-icon>
+              <v-icon size="small" @click="showObjectHistory(item, 'accounts', 'customuser')">mdi-history</v-icon>
             </template>
           </v-data-table>
         </v-card>
@@ -47,7 +49,26 @@
             </template>
             <template v-slot:item.actions="{ item }">
               <v-icon class="me-2" size="small" @click="openClinicDialog(item)">mdi-pencil</v-icon>
-              <v-icon size="small" @click="deleteClinic(item.id)">mdi-delete</v-icon>
+              <v-icon class="me-2" size="small" @click="deleteClinic(item.id)">mdi-delete</v-icon>
+              <v-icon size="small" @click="showObjectHistory(item, 'organization', 'clinic')">mdi-history</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
+      <!-- Payers Tab -->
+      <v-window-item value="payers">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-card-account-details-outline"></v-icon> &nbsp; Gerenciar Convênios
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openPayerDialog()">Novo Convênio</v-btn>
+          </v-card-title>
+          <v-data-table :headers="payerHeaders" :items="payers" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openPayerDialog(item)">mdi-pencil</v-icon>
+              <v-icon class="me-2" size="small" @click="deletePayer(item.id)">mdi-delete</v-icon>
+              <v-icon size="small" @click="showObjectHistory(item, 'billing', 'payer')">mdi-history</v-icon>
             </template>
           </v-data-table>
         </v-card>
@@ -67,7 +88,8 @@
             </template>
             <template v-slot:item.actions="{ item }">
               <v-icon class="me-2" size="small" @click="openDocumentTypeDialog(item)">mdi-pencil</v-icon>
-              <v-icon size="small" @click="deleteDocumentType(item.id)">mdi-delete</v-icon>
+              <v-icon class="me-2" size="small" @click="deleteDocumentType(item.id)">mdi-delete</v-icon>
+              <v-icon size="small" @click="showObjectHistory(item, 'documents', 'documenttype')">mdi-history</v-icon>
             </template>
           </v-data-table>
         </v-card>
@@ -129,7 +151,60 @@
         </v-card>
       </v-window-item>
 
-      <!-- Other tabs... -->
+      <!-- Guide Types Tab -->
+      <v-window-item value="guide-types">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-file-document-edit-outline"></v-icon> &nbsp; Gerenciar Tipos de Guia
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openGuideTypeDialog()">Novo Tipo de Guia</v-btn>
+          </v-card-title>
+          <v-data-table :headers="guideTypeHeaders" :items="guideTypes" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openGuideTypeDialog(item)">mdi-pencil</v-icon>
+              <v-icon class="me-2" size="small" @click="deleteGuideType(item.id)">mdi-delete</v-icon>
+              <v-icon size="small" @click="showObjectHistory(item, 'parameters', 'guidetype')">mdi-history</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
+      <!-- Procedure Statuses Tab -->
+      <v-window-item value="procedure-statuses">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-list-status"></v-icon> &nbsp; Gerenciar Status de Procedimento
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openStatusDialog()">Novo Status</v-btn>
+          </v-card-title>
+          <v-data-table :headers="statusHeaders" :items="statuses" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openStatusDialog(item)">mdi-pencil</v-icon>
+              <v-icon class="me-2" size="small" @click="deleteStatus(item.id)">mdi-delete</v-icon>
+              <v-icon size="small" @click="showObjectHistory(item, 'parameters', 'procedurestatus')">mdi-history</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
+      <!-- Exit Types Tab -->
+      <v-window-item value="exit-types">
+        <v-card flat>
+          <v-card-title class="d-flex align-center pe-2">
+            <v-icon icon="mdi-location-exit"></v-icon> &nbsp; Gerenciar Tipos de Saída
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="openExitTypeDialog()">Novo Tipo de Saída</v-btn>
+          </v-card-title>
+          <v-data-table :headers="exitTypeHeaders" :items="exitTypes" :loading="loading">
+            <template v-slot:item.actions="{ item }">
+              <v-icon class="me-2" size="small" @click="openExitTypeDialog(item)">mdi-pencil</v-icon>
+              <v-icon class="me-2" size="small" @click="deleteExitType(item.id)">mdi-delete</v-icon>
+              <v-icon size="small" @click="showObjectHistory(item, 'dialysis', 'exittype')">mdi-history</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
     </v-window>
 
     <!-- DIALOGS -->
@@ -178,6 +253,27 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="payerDialog" max-width="600px">
+      <v-card>
+        <v-card-title><span class="text-h5">{{ editedPayer.id ? 'Editar Convênio' : 'Novo Convênio' }}</span></v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12"><v-text-field v-model="editedPayer.name" label="Nome"></v-text-field></v-col>
+              <v-col cols="12"><v-select v-model="editedPayer.payer_type" :items="payerTypes" item-title="title" item-value="value" label="Tipo"></v-select></v-col>
+              <v-col cols="12"><v-select v-model="editedPayer.clinics" :items="clinics" item-title="name" item-value="id" label="Clínicas Atendidas" multiple chips></v-select></v-col>
+              <v-col cols="12"><v-switch v-model="editedPayer.is_active" label="Ativo"></v-switch></v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="closePayerDialog">Cancelar</v-btn>
+          <v-btn color="primary" @click="savePayer">Salvar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="documentTypeDialog" max-width="600px">
       <v-card>
         <v-card-title><span class="text-h5">{{ editedDocumentType.id ? 'Editar Tipo de Documento' : 'Novo Tipo' }}</span></v-card-title>
@@ -204,6 +300,14 @@
       </v-card>
     </v-dialog>
 
+    <ObjectHistory 
+      v-if="historyTarget"
+      v-model="historyDialog"
+      :object-id="historyTarget.id"
+      :content-type-app-label="historyTarget.appLabel"
+      :content-type-model="historyTarget.model"
+    />
+
   </v-container>
 </template>
 
@@ -213,12 +317,17 @@ import * as adminApi from '@/services/administrationApi';
 import * as documentsApi from '@/services/documentsApi';
 import type { DocumentType } from '@/services/documentsApi';
 import type { Clinic } from '@/stores/clinic';
-import type { GuideType, ProcedureStatus, ExitType, User, Role } from '@/services/administrationApi';
+import type { GuideType, ProcedureStatus, ExitType, User, Role, Payer } from '@/services/administrationApi';
 import { xor } from 'lodash-es';
+import ObjectHistory from '@/components/ObjectHistory.vue';
 
 // --- STATE ---
 const tab = ref('users');
 const loading = ref(false);
+
+// History Dialog State
+const historyDialog = ref(false);
+const historyTarget = ref<{ id: string; appLabel: string; model: string; } | null>(null);
 
 // Users state
 const users = ref<User[]>([]);
@@ -231,6 +340,15 @@ const roleMap = computed(() => new Map(roles.value.map(role => [role.id, role.na
 const clinics = ref<Clinic[]>([]);
 const clinicDialog = ref(false);
 const editedClinic = ref<Partial<Clinic>>({});
+
+// Payers state
+const payers = ref<Payer[]>([]);
+const payerDialog = ref(false);
+const editedPayer = ref<Partial<Payer>>({});
+const payerTypes = ref([
+  { title: 'Privado', value: 'PRIVATE' },
+  { title: 'SUS', value: 'SUS' },
+]);
 
 // Document Types state
 const documentTypes = ref<DocumentType[]>([]);
@@ -256,8 +374,8 @@ const editedExitType = ref<Partial<ExitType>>({});
 
 
 // --- COMPUTED ---
-const patientDocTypes = computed(() => documentTypes.value.filter(d => d.category === 'PATIENT'));
-const guideDocTypes = computed(() => documentTypes.value.filter(d => d.category === 'GUIDE'));
+const patientDocTypes = computed(() => documentTypes.value.filter(d => d.category === 'PATIENT' && d.name.toLowerCase() !== 'outro'));
+const guideDocTypes = computed(() => documentTypes.value.filter(d => d.category === 'GUIDE' && d.name.toLowerCase() !== 'outro'));
 const hasMandatoryDocsChanged = computed(() => {
   if (originalMandatoryDocIds.value.length !== mandatoryDocIds.value.length) return true;
   return xor(originalMandatoryDocIds.value, mandatoryDocIds.value).length > 0;
@@ -267,6 +385,7 @@ const hasMandatoryDocsChanged = computed(() => {
 // --- HEADERS ---
 const userHeaders = [ { title: 'Usuário', key: 'username' }, { title: 'Nome', key: 'first_name' }, { title: 'Sobrenome', key: 'last_name' }, { title: 'Email', key: 'email' }, { title: 'Cargos', key: 'roles' }, { title: 'Superusuário', key: 'is_superuser' }, { title: 'Ações', key: 'actions', sortable: false }, ];
 const clinicHeaders = [{ title: 'Nome', key: 'name' }, { title: 'CNPJ', key: 'cnpj' }, { title: 'Ativa', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
+const payerHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Tipo', key: 'payer_type' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
 const documentTypeHeaders = [ { title: 'Nome', key: 'name' }, { title: 'Categoria', key: 'category' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false } ];
 const guideTypeHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
 const statusHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Slug', key: 'slug' }, { title: 'Ativo', key: 'is_active' }, { title: 'Ações', key: 'actions', sortable: false }];
@@ -277,6 +396,7 @@ const exitTypeHeaders = [{ title: 'Nome', key: 'name' }, { title: 'Código', key
 onMounted(() => {
   fetchUsers();
   fetchClinics();
+  fetchPayers();
   fetchDocumentTypes();
   fetchGuideTypes();
   fetchStatuses();
@@ -318,11 +438,25 @@ watch(() => editedClinic.value.cnpj, (newValue) => {
 
 // --- METHODS ---
 
+function showObjectHistory(item: { id: string }, appLabel: string, model: string) {
+  historyTarget.value = { id: item.id, appLabel, model };
+  historyDialog.value = true;
+}
+
+// Payers Methods
+async function fetchPayers() { try { loading.value = true; payers.value = (await adminApi.getPayers()).data; } catch (e) { console.error(e); } finally { loading.value = false; } }
+function openPayerDialog(item: Payer | null = null) { editedPayer.value = item ? { ...item } : { name: '', payer_type: 'PRIVATE', is_active: true, clinics: [] }; payerDialog.value = true; }
+function closePayerDialog() { payerDialog.value = false; }
+async function savePayer() { const data = editedPayer.value; if (data.id) { await adminApi.updatePayer(data.id, data); } else { await adminApi.createPayer(data); } closePayerDialog(); await fetchPayers(); }
+async function deletePayer(id: string) { if (!confirm('Tem certeza?')) return; await adminApi.deletePayer(id); await fetchPayers(); }
+
 // Document Types Methods
 async function fetchDocumentTypes() {
   try {
     loading.value = true;
-    documentTypes.value = (await documentsApi.getDocumentTypes()).data;
+    const response = await documentsApi.getDocumentTypes();
+    // Filter out "Outro" so it's not managed by the user
+    documentTypes.value = response.data.filter(d => d.name.toLowerCase() !== 'outro');
   } catch (e) { console.error(e); } finally { loading.value = false; }
 }
 function openDocumentTypeDialog(item: DocumentType | null = null) {
@@ -402,11 +536,14 @@ const formatCNPJ = (cnpj: string) => { if (!cnpj) return ''; const cleaned = cnp
 async function fetchGuideTypes() { try { guideTypes.value = (await adminApi.getGuideTypes()).data; } catch (e) { console.error(e); } }
 async function fetchStatuses() { try { statuses.value = (await adminApi.getProcedureStatuses()).data; } catch (e) { console.error(e); } }
 async function fetchExitTypes() { try { exitTypes.value = (await adminApi.getExitTypes()).data; } catch (e) { console.error(e); } }
-const openGuideTypeDialog = (item: any) => {};
-const deleteGuideType = (id: string) => {};
-const openStatusDialog = (item: any) => {};
-const deleteStatus = (id: string) => {};
-const openExitTypeDialog = (item: any) => {};
-const deleteExitType = (id: string) => {};
+
+function openGuideTypeDialog(item: GuideType | null = null) { editedGuideType.value = item ? { ...item } : { name: '', is_active: true }; guideTypeDialog.value = true; }
+async function deleteGuideType(id: string) { if (!confirm('Tem certeza?')) return; await adminApi.deleteGuideType(id); await fetchGuideTypes(); }
+
+function openStatusDialog(item: ProcedureStatus | null = null) { editedStatus.value = item ? { ...item } : { name: '', slug: '', is_active: true }; statusDialog.value = true; }
+async function deleteStatus(id: string) { if (!confirm('Tem certeza?')) return; await adminApi.deleteProcedureStatus(id); await fetchStatuses(); }
+
+function openExitTypeDialog(item: ExitType | null = null) { editedExitType.value = item ? { ...item } : { name: '', code: '' }; exitTypeDialog.value = true; }
+async function deleteExitType(id: string) { if (!confirm('Tem certeza?')) return; await adminApi.deleteExitType(id); await fetchExitTypes(); }
 
 </script>

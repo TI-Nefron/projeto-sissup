@@ -16,9 +16,22 @@
       <template #[`item.record_type`]='{ value }'>
         {{ translateRecordType(value) }}
       </template>
+      <template #[`item.actions`]='{ item }'>
+        <v-btn icon @click="showObjectHistory(item, 'dialysis', 'patienthistory')" variant="text" size="small">
+            <v-icon size="small">mdi-history</v-icon>
+        </v-btn>
+      </template>
     </v-data-table>
 
     <PatientHistoryForm v-model="dialog" @save="onSave" />
+
+    <ObjectHistory 
+      v-if="historyTarget"
+      v-model="historyDialog"
+      :object-id="historyTarget.id"
+      :content-type-app-label="historyTarget.appLabel"
+      :content-type-model="historyTarget.model"
+    />
 
   </v-container>
 </template>
@@ -27,6 +40,7 @@
 import { ref, onMounted, watch } from 'vue';
 import apiClient from '@/services/api';
 import PatientHistoryForm from '@/components/PatientHistoryForm.vue';
+import ObjectHistory from '@/components/ObjectHistory.vue';
 import { useClinicStore } from '@/stores/clinic';
 
 interface PatientHistory {
@@ -44,6 +58,8 @@ const clinicStore = useClinicStore();
 const historyRecords = ref<PatientHistory[]>([]);
 const loading = ref(true);
 const dialog = ref(false);
+const historyDialog = ref(false);
+const historyTarget = ref<{ id: string; appLabel: string; model: string; } | null>(null);
 
 const headers = ref([
   { title: 'Paciente', value: 'patient.full_name' },
@@ -52,13 +68,14 @@ const headers = ref([
   { title: 'Clínica', value: 'clinic.name' },
   { title: 'Tipo de Saída', value: 'exit_type.name' },
   { title: 'Notas', value: 'notes' },
+  { title: 'Ações', key: 'actions', sortable: false },
 ]);
 
 const fetchHistory = async () => {
   if (!clinicStore.selectedClinic) return;
   loading.value = true;
   try {
-    const response = await apiClient.get('/api/historico/', {
+    const response = await apiClient.get('/api/dialysis/history/', {
       params: { clinic: clinicStore.selectedClinic.id }
     });
     historyRecords.value = response.data;
@@ -68,6 +85,11 @@ const fetchHistory = async () => {
     loading.value = false;
   }
 };
+
+function showObjectHistory(item: { id: string }, appLabel: string, model: string) {
+  historyTarget.value = { id: item.id, appLabel, model };
+  historyDialog.value = true;
+}
 
 watch(() => clinicStore.selectedClinic, (newClinic, oldClinic) => {
   if (newClinic && newClinic.id !== oldClinic?.id) {

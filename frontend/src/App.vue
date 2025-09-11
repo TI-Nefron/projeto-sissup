@@ -6,7 +6,7 @@
         <v-list-item prepend-icon="mdi-account-group" title="Pacientes" to="/patients"></v-list-item>
         <v-list-item prepend-icon="mdi-file-document-multiple" title="Guias" to="/guides"></v-list-item>
         <v-list-item prepend-icon="mdi-history" title="Histórico" to="/history"></v-list-item>
-        <v-list-item to="/payers" title="Convênios" prepend-icon="mdi-card-account-details-outline"></v-list-item>
+        
         <v-list-item v-if="authStore.user?.is_superuser" to="/audit-logs" title="Logs de Auditoria" prepend-icon="mdi-shield-lock"></v-list-item>
       </v-list>
     </v-navigation-drawer>

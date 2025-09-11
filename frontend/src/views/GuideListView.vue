@@ -74,86 +74,30 @@
         <v-btn icon :to="`/guides/${item.id}/edit`" variant="text" size="small">
             <v-icon size="small">mdi-pencil</v-icon>
         </v-btn>
-        <v-btn icon @click="showDocuments(item)" variant="text" size="small">
-            <v-icon size="small">mdi-file-document-outline</v-icon>
+        <v-btn icon @click="showObjectHistory(item, 'billing', 'guide')" variant="text" size="small">
+            <v-icon size="small">mdi-history</v-icon>
         </v-btn>
       </template>
     </v-data-table>
 
-    <v-dialog v-model="dialog" max-width="800px">
-      <v-card>
-        <v-card-title>
-          <span class="text-h5">Documentos da Guia</span>
-        </v-card-title>
-        <v-card-text>
-          <v-list v-if="selectedGuideDocuments.length > 0">
-            <v-list-item
-              v-for="doc in selectedGuideDocuments"
-              :key="doc.id"
-            >
-              <template v-slot:prepend>
-                <v-checkbox v-model="selectedDocuments" :value="doc"></v-checkbox>
-              </template>
-              <v-list-item-title>
-                {{ doc.type.name.startsWith('Outro') ? doc.description : doc.type.name }}
-              </v-list-item-title>
-              <v-list-item-subtitle>
-                <span v-if="doc.type.name.startsWith('Outro')">({{ doc.type.name }}) - </span>
-                {{ new Date(doc.created_at).toLocaleDateString() }}
-              </v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-          <v-alert v-else type="info" text="Nenhum documento encontrado para esta guia."></v-alert>
-
-          <v-divider class="my-4"></v-divider>
-
-          <h3 class="text-h6 mb-2">Novo Documento</h3>
-          <DocumentUpload
-            v-if="selectedGuide"
-            :content_type_str="'billing.guide'"
-            :object_id="selectedGuide.id"
-            :clinic_id="selectedGuide.clinic.id"
-            @upload-completed="onUploadCompleted"
-          />
-
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="dialog = false">Fechar</v-btn>
-          <v-btn color="primary" :disabled="selectedDocuments.length !== 2" @click="compareDocuments">Comparar</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <DocumentViewer
-      v-model="viewerDialog"
-      :doc1url="doc1url"
-      :doc2url="doc2url"
+    <ObjectHistory 
+      v-if="historyTarget"
+      v-model="historyDialog"
+      :object-id="historyTarget.id"
+      :content-type-app-label="historyTarget.appLabel"
+      :content-type-model="historyTarget.model"
     />
+
   </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import apiClient from '@/services/api';
-import DocumentViewer from '@/components/DocumentViewer.vue';
-import DocumentUpload from '@/components/DocumentUpload.vue';
+import ObjectHistory from '@/components/ObjectHistory.vue';
 import { useClinicStore } from '@/stores/clinic';
 
 // Interfaces
-interface DocumentType {
-  id: string;
-  name: string;
-}
-
-interface Document {
-  id: string;
-  type: DocumentType;
-  description?: string;
-  file_url: string;
-  created_at: string;
-}
-
 interface Clinic {
   id: string;
   name: string;
@@ -189,7 +133,6 @@ interface Guide {
   authorization_number: string;
   valid_from: string;
   valid_to: string;
-  documents: Document[];
 }
 
 const clinicStore = useClinicStore();
@@ -211,7 +154,6 @@ const filters = ref({
 const dateMenuFrom = ref(false);
 const dateMenuTo = ref(false);
 
-const clinics = ref<Clinic[]>([]);
 const payers = ref<Payer[]>([]);
 const guideTypes = ref<GuideType[]>([]);
 const statuses = ref<ProcedureStatus[]>([]);
@@ -219,13 +161,9 @@ const natureOptions = ref([
     { title: 'Crônico', value: 'CHRONIC' },
     { title: 'Agudo', value: 'ACUTE' }
 ]);
-const dialog = ref(false);
-const selectedGuide = ref<Guide | null>(null);
-const selectedGuideDocuments = ref<Document[]>([]);
-const selectedDocuments = ref<Document[]>([]);
-const viewerDialog = ref(false);
-const doc1url = ref('');
-const doc2url = ref('');
+
+const historyDialog = ref(false);
+const historyTarget = ref<{ id: string; appLabel: string; model: string; } | null>(null);
 
 let debounceTimer: number;
 
@@ -252,10 +190,9 @@ const fetchGuides = async () => {
       Object.entries(filters.value).filter(([, value]) => value !== null && value !== '')
     );
     
-    // Adiciona a clínica selecionada como um filtro fixo
     const params = { ...activeFilters, clinic: clinicStore.selectedClinic.id };
 
-    const response = await apiClient.get<Guide[]>('/api/guias/', { params });
+    const response = await apiClient.get<Guide[]>('/api/billing/guides/', { params });
     guides.value = response.data;
   } catch (err) {
     console.error('Erro ao buscar guias:', err);
@@ -270,9 +207,9 @@ const fetchFilterOptions = async () => {
   try {
     const clinicId = clinicStore.selectedClinic.id;
     const [payerRes, guideTypeRes, statusRes] = await Promise.all([
-      apiClient.get<Payer[]>(`/api/clinics/${clinicId}/payers/`),
-      apiClient.get<GuideType[]>(`/api/clinics/${clinicId}/guide-types/`),
-      apiClient.get<ProcedureStatus[]>(`/api/clinics/${clinicId}/procedure-statuses/`),
+      apiClient.get<Payer[]>(`/api/billing/clinics/${clinicId}/payers/`),
+      apiClient.get<GuideType[]>(`/api/parameters/clinics/${clinicId}/guide-types/`),
+      apiClient.get<ProcedureStatus[]>(`/api/parameters/clinics/${clinicId}/procedure-statuses/`),
     ]);
     payers.value = payerRes.data;
     guideTypes.value = guideTypeRes.data;
@@ -281,6 +218,11 @@ const fetchFilterOptions = async () => {
     console.error('Erro ao buscar opções de filtro:', error);
   }
 };
+
+function showObjectHistory(item: { id: string }, appLabel: string, model: string) {
+  historyTarget.value = { id: item.id, appLabel, model };
+  historyDialog.value = true;
+}
 
 const getStatusColor = (status: string) => {
   const lowerCaseStatus = status.toLowerCase();
@@ -293,13 +235,8 @@ const getStatusColor = (status: string) => {
 
 watch(() => filters.value.patient__full_name__icontains, (newValue, oldValue) => {
   if (newValue) {
-    // Remove accents
     let formatted = newValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    
-    // Prevent multiple spaces
     formatted = formatted.replace(/\s{2,}/g, ' ');
-
-    // Capitalize first letter of each word
     formatted = formatted.split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     ).join(' ');
@@ -328,35 +265,6 @@ const clearFilters = () => {
     valid_from__gte: null,
     valid_to__lte: null,
   };
-  // The watch will trigger fetchGuides
-};
-
-const showDocuments = (guide: Guide) => {
-  selectedGuide.value = guide;
-  selectedGuideDocuments.value = guide.documents || [];
-  selectedDocuments.value = [];
-  dialog.value = true;
-};
-
-const compareDocuments = () => {
-  if (selectedDocuments.value.length === 2) {
-    doc1url.value = selectedDocuments.value[0].file_url.replace('http://minio:9000', 'http://localhost:9090');
-    doc2url.value = selectedDocuments.value[1].file_url.replace('http://minio:9000', 'http://localhost:9090');
-    viewerDialog.value = true;
-  }
-};
-
-const onUploadCompleted = async () => {
-  // Refetch guides to get updated document info
-  await fetchGuides();
-  // Find the updated guide and refresh its documents in the dialog
-  const currentGuide = selectedGuide.value;
-  if (currentGuide) {
-    const updatedGuide = guides.value.find(g => g.id === currentGuide.id);
-    if (updatedGuide) {
-      selectedGuideDocuments.value = updatedGuide.documents || [];
-    }
-  }
 };
 
 watch(() => clinicStore.selectedClinic, (newClinic, oldClinic) => {

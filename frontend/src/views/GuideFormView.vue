@@ -45,13 +45,48 @@
           </v-card-text>
         </v-card>
 
-        <!-- Documents Card -->
+        <!-- Existing Documents Card -->
+        <v-card v-if="!isNewGuide && guideDocuments.length > 0" class="mb-6">
+          <v-card-title>Documentos Anexados</v-card-title>
+          <v-list lines="one">
+            <v-list-item
+              v-for="doc in guideDocuments"
+              :key="doc.id"
+              :title="doc.type.name.startsWith('Outro') ? doc.description : doc.type.name"
+              :subtitle="`Adicionado em: ${new Date(doc.created_at).toLocaleDateString()}`"
+            >
+              <template v-slot:append>
+                <v-btn icon @click="openPreview(doc)" variant="text" size="small"><v-icon>mdi-eye-outline</v-icon></v-btn>
+                <v-btn icon :href="doc.file_url.replace('http://minio:9000', 'http://localhost:9090')" target="_blank" variant="text" size="small"><v-icon>mdi-download-outline</v-icon></v-btn>
+                <v-btn icon @click="deleteDocument(doc.id)" variant="text" size="small"><v-icon>mdi-delete</v-icon></v-btn>
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-card>
+
+        <!-- Mandatory Documents Upload -->
         <v-card class="mb-6">
+          <v-card-title>Documentos Obrigatórios</v-card-title>
           <v-card-text>
-            <MultiDocumentUpload 
-              category="GUIDE" 
-              @update:documents="updateDocuments"
-            />
+            <v-row v-for="(doc, index) in mandatoryDocs" :key="doc.type.id">
+              <v-col cols="12" md="6"><v-label>{{ doc.type.name }}</v-label></v-col>
+              <v-col cols="12" md="6"><v-file-input v-model="mandatoryDocs[index].file" label="Arquivo" density="compact"></v-file-input></v-col>
+            </v-row>
+            <v-alert v-if="!isNewGuide && mandatoryDocs.length === 0" type="info" text="Nenhum documento obrigatório para esta combinação."></v-alert>
+            <v-alert v-if="isNewGuide && !guide.payer || !guide.guide_type || !guide.nature" type="info" text="Selecione convênio, tipo de guia e natureza para ver os documentos obrigatórios."></v-alert>
+          </v-card-text>
+        </v-card>
+
+        <!-- Extra Documents Upload -->
+        <v-card class="mb-6">
+          <v-card-title>Documentos Extras</v-card-title>
+          <v-card-text>
+            <v-row v-for="(doc, index) in extraDocs" :key="index" class="mb-2">
+              <v-col cols="12" md="5"><v-text-field v-model="doc.description" label="Descrição do Documento" density="compact" hide-details></v-text-field></v-col>
+              <v-col cols="12" md="6"><v-file-input v-model="doc.file" label="Arquivo" density="compact" hide-details></v-file-input></v-col>
+              <v-col cols="12" md="1"><v-btn icon @click="removeExtraDoc(index)" size="small"><v-icon>mdi-delete</v-icon></v-btn></v-col>
+            </v-row>
+            <v-btn @click="addExtraDoc" color="primary" class="mt-2">Adicionar Documento Extra</v-btn>
           </v-card-text>
         </v-card>
 
@@ -66,12 +101,16 @@
       </v-container>
     </v-form>
 
-    <ObjectHistory 
-      v-model="showHistory"
-      :object-id="guide.id"
-      content-type-app-label="billing"
-      content-type-model="guide"
-    />
+    <ObjectHistory v-model="showHistory" :object-id="guide.id" content-type-app-label="billing" content-type-model="guide" />
+    <v-dialog v-model="previewDialog" fullscreen>
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-btn icon dark @click="previewDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+          <v-toolbar-title>{{ selectedDocForPreview?.type.name }}</v-toolbar-title>
+        </v-toolbar>
+        <v-card-text class="pa-0" style="height: calc(100vh - 64px);"><embed v-if="selectedDocForPreview" :src="selectedDocForPreview.file_url.replace('http://minio:9000', 'http://localhost:9090')" type="application/pdf" width="100%" height="100%" /></v-card-text>
+      </v-card>
+    </v-dialog>
 
   </v-container>
 </template>
@@ -81,20 +120,20 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import apiClient from '@/services/api';
 import { useClinicStore } from '@/stores/clinic';
-import MultiDocumentUpload from '@/components/MultiDocumentUpload.vue';
 import ObjectHistory from '@/components/ObjectHistory.vue';
+import { debounce } from 'lodash-es';
 
 // Interfaces
-interface DocumentData {
-  type: string | null;
-  description: string;
-  file: File[] | null;
-}
+interface DocumentType { id: string; name: string; }
+interface Document { id: string; type: DocumentType; description?: string; file_url: string; created_at: string; }
 interface Clinic { id: string; name: string; }
 interface Patient { id: string; full_name: string; clinic: Clinic; }
 interface Payer { id: string; name: string; }
 interface GuideType { id: string; name: string; }
 interface ProcedureStatus { id: string; name: string; }
+interface ParameterRule { id: string; required_documents: DocumentType[]; }
+interface UploadableDoc { type: DocumentType; file: File[] | null; }
+interface ExtraDoc { description: string; file: File[] | null; }
 interface Guide {
   id: string;
   patient: string | null;
@@ -107,6 +146,7 @@ interface Guide {
   status: string | null;
   valid_from: string | null;
   valid_to: string | null;
+  documents: Document[];
 }
 
 const route = useRoute();
@@ -114,7 +154,7 @@ const router = useRouter();
 const clinicStore = useClinicStore();
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
-const guide = ref<Guide>({ id: '', patient: null, clinic: null, clinic_name: '', payer: null, guide_type: null, nature: 'CHRONIC', authorization_number: '', status: null, valid_from: null, valid_to: null });
+const guide = ref<Guide>({ id: '', patient: null, clinic: null, clinic_name: '', payer: null, guide_type: null, nature: 'CHRONIC', authorization_number: '', status: null, valid_from: null, valid_to: null, documents: [] });
 const showHistory = ref(false);
 
 // Data for select boxes
@@ -123,15 +163,18 @@ const payers = ref<Payer[]>([]);
 const guideTypes = ref<GuideType[]>([]);
 const statuses = ref<ProcedureStatus[]>([]);
 const natureOptions = ref([{ title: 'Crônico', value: 'CHRONIC' }, { title: 'Agudo', value: 'ACUTE' }]);
-const documentsToUpload = ref<DocumentData[]>([]);
+
+// Document state
+const guideDocuments = ref<Document[]>([]);
+const mandatoryDocs = ref<UploadableDoc[]>([]);
+const extraDocs = ref<ExtraDoc[]>([]);
+const outroDocumentTypeId = ref<string | null>(null);
+const previewDialog = ref(false);
+const selectedDocForPreview = ref<Document | null>(null);
 
 const formTitle = computed(() => (route.params.id ? 'Editar Guia' : 'Nova Guia'));
 const isNewGuide = computed(() => !route.params.id);
 const requiredRule = (v: string | null) => !!v || 'Este campo é obrigatório';
-
-const updateDocuments = (docs: DocumentData[]) => {
-  documentsToUpload.value = docs;
-};
 
 watch(() => guide.value.patient, (patientId) => {
   if (patientId) {
@@ -143,40 +186,76 @@ watch(() => guide.value.patient, (patientId) => {
   }
 });
 
+const fetchMandatoryDocsForGuide = async () => {
+  if (!guide.value.payer || !guide.value.guide_type || !guide.value.nature) {
+    mandatoryDocs.value = [];
+    return;
+  }
+  try {
+    const params = { payer: guide.value.payer, guide_type: guide.value.guide_type, nature: guide.value.nature };
+    const response = await apiClient.get<ParameterRule[]>('/api/parameters/parameter-rules/', { params });
+    if (response.data.length > 0) {
+      mandatoryDocs.value = response.data[0].required_documents.map(type => ({ type, file: null }));
+    } else {
+      mandatoryDocs.value = [];
+    }
+  } catch (error) {
+    console.error('Erro ao buscar regras de parâmetros:', error);
+    mandatoryDocs.value = [];
+  }
+};
+
+const debouncedFetchMandatoryDocs = debounce(fetchMandatoryDocsForGuide, 500);
+watch(() => [guide.value.payer, guide.value.guide_type, guide.value.nature], debouncedFetchMandatoryDocs);
+
 const fetchRelatedData = async () => {
   const clinicId = clinicStore.selectedClinic?.id;
   if (!clinicId) return;
 
   try {
-    const [patientsRes, payersRes, guideTypesRes, statusRes] = await Promise.all([
+    const [patientsRes, payersRes, guideTypesRes, statusRes, allDocTypesRes] = await Promise.all([
       apiClient.get<Patient[]>(`/api/pacientes/`, { params: { clinic: clinicId } }),
       apiClient.get<Payer[]>(`/api/billing/clinics/${clinicId}/payers/`),
       apiClient.get<GuideType[]>(`/api/parameters/clinics/${clinicId}/guide-types/`),
       apiClient.get<ProcedureStatus[]>(`/api/parameters/clinics/${clinicId}/procedure-statuses/`),
+      apiClient.get<DocumentType[]>('/api/document-types/', { params: { category: 'GUIDE' } })
     ]);
     patients.value = patientsRes.data;
     payers.value = payersRes.data;
     guideTypes.value = guideTypesRes.data;
     statuses.value = statusRes.data;
+    const outroDoc = allDocTypesRes.data.find(type => type.name.toLowerCase() === 'outro');
+    if (outroDoc) outroDocumentTypeId.value = outroDoc.id;
+
   } catch (error) { console.error('Erro ao buscar dados relacionados:', error); }
 };
 
 onMounted(async () => {
-  const clinicId = clinicStore.selectedClinic?.id;
   await fetchRelatedData();
-
   if (route.params.id) {
-    // Fetch existing guide data
     try {
-      const response = await apiClient.get<any>(`/api/billing/guides/${route.params.id}/`);
-      const data = response.data;
-      guide.value = { ...data, patient: data.patient.id, payer: data.payer.id, guide_type: data.guide_type.id, status: data.status.id, clinic_name: data.clinic.name };
+      const response = await apiClient.get<Guide>(`/api/billing/guides/${route.params.id}/`);
+      guide.value = { ...response.data, patient: response.data.patient.id, payer: response.data.payer.id, guide_type: response.data.guide_type.id, status: response.data.status.id, clinic_name: response.data.clinic.name };
+      guideDocuments.value = response.data.documents || [];
     } catch (error) { console.error('Erro ao buscar guia:', error); }
-  } else if (clinicId) {
-    guide.value.clinic = clinicId;
-    guide.value.clinic_name = clinicStore.selectedClinic?.name || '';
+  } else if (clinicStore.selectedClinic) {
+    guide.value.clinic = clinicStore.selectedClinic.id;
+    guide.value.clinic_name = clinicStore.selectedClinic.name || '';
   }
 });
+
+const addExtraDoc = () => extraDocs.value.push({ description: '', file: null });
+const removeExtraDoc = (index: number) => extraDocs.value.splice(index, 1);
+const openPreview = (doc: Document) => { selectedDocForPreview.value = doc; previewDialog.value = true; };
+
+const deleteDocument = async (docId: string) => {
+  if (confirm('Tem certeza que deseja excluir este documento?')) {
+    try {
+      await apiClient.delete(`/api/documents/${docId}/`);
+      guideDocuments.value = guideDocuments.value.filter(d => d.id !== docId);
+    } catch (error) { console.error('Erro ao excluir documento:', error); }
+  }
+};
 
 const saveGuide = async () => {
   if (!form.value) return;
@@ -184,20 +263,24 @@ const saveGuide = async () => {
   if (!valid) return;
 
   const formData = new FormData();
-  
-  // Append guide data
   Object.entries(guide.value).forEach(([key, value]) => {
-    if (value !== null) formData.append(key, value as string);
+    if (value !== null && key !== 'documents') formData.append(key, value as string);
   });
 
-  // Append documents
-  documentsToUpload.value.forEach((doc, index) => {
-    if (doc.file && doc.file.length > 0 && doc.type) {
-      formData.append(`documents_data[${index}]file`, doc.file[0]);
-      formData.append(`documents_data[${index}]type`, doc.type);
-      if (doc.description) {
-        formData.append(`documents_data[${index}]description`, doc.description);
-      }
+  let docIndex = 0;
+  mandatoryDocs.value.forEach(doc => {
+    if (doc.file && doc.file.length > 0) {
+      formData.append(`documents_data[${docIndex}]file`, doc.file[0]);
+      formData.append(`documents_data[${docIndex}]type`, doc.type.id);
+      docIndex++;
+    }
+  });
+  extraDocs.value.forEach(doc => {
+    if (doc.file && doc.file.length > 0 && doc.description && outroDocumentTypeId.value) {
+      formData.append(`documents_data[${docIndex}]file`, doc.file[0]);
+      formData.append(`documents_data[${docIndex}]type`, outroDocumentTypeId.value);
+      formData.append(`documents_data[${docIndex}]description`, doc.description);
+      docIndex++;
     }
   });
 

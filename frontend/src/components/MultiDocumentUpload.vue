@@ -72,7 +72,13 @@ const fetchDocumentTypes = async () => {
     const response = await apiClient.get<DocumentType[]>('/api/document-types/', {
       params: { category: props.category },
     });
-    documentTypes.value = response.data;
+    // Standardize the name for the "Other" document type to keep the UI clean
+    documentTypes.value = response.data.map(doc => {
+      if (doc.name.includes('Outro')) {
+        return { ...doc, name: 'Outro' };
+      }
+      return doc;
+    });
   } catch (error) {
     console.error('Erro ao buscar tipos de documento:', error);
   }

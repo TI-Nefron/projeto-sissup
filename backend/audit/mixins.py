@@ -39,10 +39,12 @@ class AuditableSerializerMixin:
 
 class AuditableViewSetMixin:
     def perform_destroy(self, instance):
+        # Serialize the instance data BEFORE deleting it, as deletion might remove associated files.
+        deleted_data = self.get_serializer(instance).data
         log_change(
             user=self.request.user,
             instance=instance,
             action=AuditLog.Action.DELETE,
-            changes={'deleted': self.get_serializer(instance).data}
+            changes={'deleted': deleted_data}
         )
         instance.delete()
